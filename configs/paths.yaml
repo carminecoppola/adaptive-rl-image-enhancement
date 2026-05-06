@@ -1,0 +1,8 @@
+paths:
+  hpc_storage_root: "${HPC_STORAGE_ROOT}"
+  data_root: "${DATA_ROOT}"
+  dataset_root: "${DATASET_ROOT}"
+  processed_data_root: "${PROCESSED_DATA_ROOT}"
+  checkpoint_root: "${CHECKPOINT_ROOT}"
+  results_root: "${RESULTS_ROOT}"
+  logs_root: "${LOGS_ROOT}"

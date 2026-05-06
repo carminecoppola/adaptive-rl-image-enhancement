@@ -1,0 +1,10 @@
+evaluation:
+  num_images: 100
+  compare_with:
+    - "degraded"
+    - "fixed_filter_pipeline"
+    - "rl_agent"
+
+metrics:
+  - "psnr"
+  - "ssim"

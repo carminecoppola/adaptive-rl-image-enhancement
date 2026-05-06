@@ -1,0 +1,13 @@
+numpy<2.4
+pandas
+matplotlib
+pillow
+opencv-python
+scikit-image
+torch
+torchvision
+gymnasium
+stable-baselines3
+pyyaml
+python-dotenv
+tqdm

@@ -1,0 +1,24 @@
+environment:
+  max_steps: 5
+  include_step_channel: true
+  action_space:
+  - increase_brightness
+  - decrease_brightness
+  - increase_contrast
+  - decrease_contrast
+  - gaussian_denoise
+  - sharpen
+  - gamma_up
+  - gamma_down
+  - stop
+reward:
+  use_psnr: true
+  use_ssim: false
+  step_penalty: 0.01
+  repeated_action_penalty: 0.05
+  no_improvement_penalty: 0.03
+  stop_bonus_scale: 0.18
+  stop_no_improvement_penalty: 0.08
+  early_stop_min_improvement: 0.01
+  truncate_without_stop_penalty: 0.4
+  stop_action_bonus: 0.0
