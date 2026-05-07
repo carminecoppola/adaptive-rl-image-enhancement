@@ -1,14 +1,28 @@
 dataset:
+  # Supported datasets: "CIFAR10", "STL10", "UIEB"
+  # - CIFAR10: 32x32 synthetic images (default, fast debug)
+  # - STL10: 96x96 cleaner images (visual-safe)
+  # - UIEB: real 890 underwater image pairs (production)
   name: "CIFAR10"
   # If omitted, defaults are selected by dataset:
-  # CIFAR10 -> 32, STL10 -> 96
+  # CIFAR10 -> 32, STL10 -> 96, UIEB -> 128
   image_size: 32
   # For STL10 valid splits: train, train+unlabeled, unlabeled, test
+  # For UIEB valid splits: train, val, test (auto-split by seed)
   split: "train"
   train_split: true
   download: true
 
 degradation:
+  # Degradation types:
+  # - "mixed": randomly sample from candidate_types
+  # - "gaussian_noise": additive Gaussian noise
+  # - "low_brightness": darken image
+  # - "low_contrast": reduce contrast
+  # - "blur": Gaussian blur
+  # - "combined": combines multiple degradations
+  # - "underwater": simulates underwater physics (new in Task 6)
+  # - "none": no degradation (use with UIEB which has real degradation)
   type: "mixed"
   candidate_types:
     - "gaussian_noise"

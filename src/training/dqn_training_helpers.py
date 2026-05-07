@@ -68,12 +68,23 @@ def build_env_for_image(
     include_step_channel: bool,
     degradation_type: str,
     noise_std: float,
+    degraded_image: Image.Image | None = None,
 ) -> ImageEnhancementEnv:
-    degraded_image = degrade_image(
-        clean_image,
-        degradation_type=degradation_type,
-        noise_std=noise_std,
-    )
+    """
+    Build environment for a single image.
+    
+    Args:
+        clean_image: Reference high-quality image (reward ground truth)
+        degraded_image: Pre-degraded image to start from (optional).
+                       If None, will apply degradation_type to clean_image.
+                       Use this for UIEB where images already have real degradation.
+    """
+    if degraded_image is None:
+        degraded_image = degrade_image(
+            clean_image,
+            degradation_type=degradation_type,
+            noise_std=noise_std,
+        )
     return ImageEnhancementEnv(
         clean_image=clean_image,
         degraded_image=degraded_image,
