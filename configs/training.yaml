@@ -1,5 +1,5 @@
 training:
-  algorithm: DQN
+  algorithm: DDQN
   seed: 42
   num_episodes: 260
   learning_rate: 0.0001

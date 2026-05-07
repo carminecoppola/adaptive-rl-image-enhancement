@@ -7,6 +7,20 @@ from src.agents.dqn import DQN
 
 
 class DQNAgent:
+    """
+    Double DQN (DDQN) agent for image enhancement via reinforcement learning.
+    
+    Uses two networks (policy_net and target_net) to reduce Q-value overestimation:
+    - policy_net: selects the best action in next states
+    - target_net: evaluates the Q-value of the selected action
+    
+    This two-network approach prevents the overestimation bias inherent in standard DQN,
+    which uses the same network to both select and evaluate actions. DDQN produces more
+    stable and reliable training, especially important for image enhancement where
+    high variance between runs can lead to poor policies.
+    
+    Reference: "Deep Reinforcement Learning with Double Q-learning" (van Hasselt et al., 2015)
+    """
     def __init__(
         self,
         num_actions: int,
@@ -15,7 +29,7 @@ class DQNAgent:
         gamma: float = 0.99,
         lr: float = 1e-4,
         batch_size: int = 32,
-        use_double_dqn: bool = False,
+        use_double_dqn: bool = True,
         use_dueling_dqn: bool = False,
         device=None,
     ):
