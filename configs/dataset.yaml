@@ -15,19 +15,25 @@ dataset:
 
 degradation:
   # Degradation types:
-  # - "mixed": randomly sample from candidate_types
+  # - "mixed": randomly sample from candidate_types (default)
   # - "gaussian_noise": additive Gaussian noise
   # - "low_brightness": darken image
   # - "low_contrast": reduce contrast
   # - "blur": Gaussian blur
   # - "combined": combines multiple degradations
-  # - "underwater": simulates underwater physics (new in Task 6)
+  # - "underwater": physics-based underwater degradation (Task 6)
   # - "none": no degradation (use with UIEB which has real degradation)
   type: "mixed"
   candidate_types:
     - "gaussian_noise"
     - "low_brightness"
     - "low_contrast"
+    - "blur"
+    - "combined"
+  # Underwater degradation parameters
+  underwater:
+    depth: 5.0          # Simulated water depth (0-10)
+    turbidity: 0.5      # Water turbidity factor (0-1)
     - "blur"
     - "combined"
   noise_std: 0.1
