@@ -22,3 +22,5 @@ reward:
   early_stop_min_improvement: 0.01
   truncate_without_stop_penalty: 0.75
   stop_action_bonus: 0.04
+  terminal_reward_psnr_scale: 1.5
+  terminal_reward_ssim_scale: 0.0
