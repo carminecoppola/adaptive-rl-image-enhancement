@@ -1,0 +1,19 @@
+dataset:
+  name: "STL10"
+  image_size: 96
+  split: "train"
+  download: false
+  train_subset_size: 5000
+  eval_subset_size: 500
+
+degradation:
+  type: "mixed"
+  candidate_types:
+    - "gaussian_noise"
+    - "low_brightness"
+    - "low_contrast"
+    - "blur"
+    - "combined"
+  noise_std: 0.1
+  low_contrast: false
+  low_brightness: false

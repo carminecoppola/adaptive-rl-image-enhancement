@@ -10,7 +10,8 @@
 - The target contribution is: image enhancement as an **interpretable sequential decision process** with DQN choosing discrete operators.
 
 ## Current Technical Setup
-- **Dataset:** CIFAR-10 train split as clean source images (native `32x32`).
+- **Dataset (default debug):** CIFAR-10 train split as clean source images (native `32x32`).
+- **Dataset (visual-safe alternative):** STL-10 train split (native `96x96`) with controlled subset.
 - **Degradations:** synthetic (`gaussian_noise`, `low_brightness`, `low_contrast`, `blur`, `combined`, and `mixed` policy).
 - **Environment:** Gymnasium (`ImageEnhancementEnv`) with `max_steps`, `stop` action, optional step-channel.
 - **Action space:**
@@ -93,7 +94,7 @@ Current best trade-off run:
 - `stop_rate = 0.0546` (gate still fails only on stop-rate)
 
 ### Phase 4 - Policy Behavior Analysis
-**Status:** Implemented baseline tooling; expanded with visual diagnostics.
+**Status:** Implemented baseline tooling; expanded with visual diagnostics and notebook validation.
 
 Implemented:
 - `analyze_dqn_actions.py` logs:
@@ -110,6 +111,7 @@ Implemented:
 
 Latest visual artifacts:
 - `${LOGS_ROOT}/dqn/visual_inspection_20260506/`
+- `${LOGS_ROOT}/dqn/stl10_safe_validation_20260507/stl10_clean_degraded_grid.png`
 
 ### Phase 5 - Generalization / OOD
 **Status:** Partially implemented.
@@ -147,6 +149,14 @@ Root cause found:
 
 Applied fix:
 - Training/eval/action-analysis now use YAML-driven image size aligned to dataset (`32x32`).
+- Environment now avoids unnecessary resize when source image already matches target size.
+
+Additional dataset-mode fix:
+- Added STL-10 safe config with small subset for visual/eval-first workflow:
+  - `configs/dataset_stl10_safe.yaml`
+  - `train_subset_size=5000`
+  - `eval_subset_size=500`
+  - `image_size=96`
 
 Compatibility note:
 - Existing DQN conv stack was built around `128x128` feature extraction.
@@ -161,18 +171,21 @@ Compatibility note:
 - Reward shaping iterations (control/treatment protocol).
 - ID vs OOD evaluation runs.
 - Visual inspection of dataset quality and policy trajectories.
+- End-to-end notebook execution validation via `nbconvert --execute` with zero runtime cell errors.
+- Jupyter environment repair in `venv` (`notebook`, `nbformat`, and dependencies installed).
 
-## Open Problems (As of 2026-05-06)
+## Open Problems (As of 2026-05-07)
 1. **Stop-rate remains below threshold** in otherwise promising runs.
 2. **Run instability**: outcomes vary substantially between runs.
 3. **Reward-quality mismatch risk** still exists in some settings.
 4. **OOD robustness is insufficient** (quality drops under stronger degradations).
 5. **Dataset ceiling**: CIFAR-10 low native resolution limits visual fidelity and realism of enhancement claims.
+6. **Notebook portability**: notebook file is currently ignored by `.gitignore`, so notebook edits are local unless ignore policy changes.
 
 ## Recommended Immediate Next Steps
-1. Consolidate Phase 3 reward tuning to raise stop-rate without sacrificing delta PSNR.
-2. Run a controlled Double-vs-Double+Dueling matrix with fixed seeds and equal budgets.
-3. Decide whether to keep CIFAR-10 for method validation only and introduce a higher-resolution dataset for stronger visual claims.
+1. Keep CIFAR-10 as default for fast RL debug, and use STL-10 safe config for visual/eval checks.
+2. Consolidate Phase 3 reward tuning to raise stop-rate without sacrificing delta PSNR.
+3. Run a controlled Double-vs-Double+Dueling matrix with fixed seeds and equal budgets.
 4. If stability remains poor, implement PER as next incremental Phase 2 extension.
 
 ## How to Run Core Checks
@@ -180,6 +193,10 @@ From project root (with `venv`):
 - `./venv/bin/python src/evaluation/analyze_dqn_actions.py --checkpoint <ckpt>`
 - `./venv/bin/python src/evaluation/evaluation_dqn_baselines.py --checkpoint <ckpt>`
 - `./venv/bin/python src/evaluation/compare_dqn_runs.py`
+
+STL-10 safe validation (no training):
+- `./venv/bin/python -m jupyter nbconvert --to notebook --execute notebooks/visual_policy_analysis.ipynb --output visual_policy_analysis.executed.ipynb --output-dir notebooks`
+- Visual grid output: `${LOGS_ROOT}/dqn/stl10_safe_validation_20260507/stl10_clean_degraded_grid.png`
 
 ## Key Artifacts
 Per run:

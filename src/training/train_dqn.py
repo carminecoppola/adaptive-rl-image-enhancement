@@ -37,7 +37,7 @@ from src.training.dqn_tracking import (
     print_eval_log,
 )
 from src.training.dqn_types import EpisodeSummaryRow, EvalHistoryRow, ResolvedConfig, RunMeta
-from src.utils import load_config, build_train_eval_indices, sample_indices
+from src.utils import load_config, build_train_eval_indices, sample_indices, apply_subset_limits
 
 
 def train() -> None:
@@ -76,6 +76,8 @@ def train() -> None:
     if not isinstance(candidate_degradation_types, list):
         candidate_degradation_types = []
     noise_std = float(degradation_config.get("noise_std", 0.1))
+    train_subset_size = int(dataset_core_cfg.get("train_subset_size", 0) or 0)
+    eval_subset_size = int(dataset_core_cfg.get("eval_subset_size", 0) or 0)
 
     num_episodes = int(training_config.get("num_episodes", 120))
     batch_size = int(training_config.get("batch_size", 64))
@@ -101,6 +103,13 @@ def train() -> None:
     train_indices, eval_indices = build_train_eval_indices(
         dataset_size=len(train_dataset),
         eval_pool_size=eval_pool_size,
+        seed=seed,
+    )
+    train_indices, eval_indices = apply_subset_limits(
+        train_indices=train_indices,
+        eval_indices=eval_indices,
+        train_subset_size=train_subset_size,
+        eval_subset_size=eval_subset_size,
         seed=seed,
     )
 
@@ -172,6 +181,8 @@ def train() -> None:
     print(
         f"[DATASET] {dataset_name} train_size={len(train_dataset)} "
         f"train_pool={len(train_indices)} eval_pool={len(eval_indices)} "
+        f"(subset_cfg train={train_subset_size if train_subset_size > 0 else 'full'}, "
+        f"eval={eval_subset_size if eval_subset_size > 0 else 'full'}) "
         f"data_root={dataset_root}"
     )
     print(

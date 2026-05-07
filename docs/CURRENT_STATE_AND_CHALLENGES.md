@@ -7,7 +7,8 @@ The main contribution of this project is not to outperform fully supervised rest
 This project trains a DQN agent to improve degraded images through a short sequence of discrete image-processing actions.
 
 Current setup:
-- Dataset: CIFAR-10 (clean) with synthetic degradations
+- Dataset default: CIFAR-10 (clean) with synthetic degradations
+- Dataset visual-safe mode: STL-10 (native 96x96) with controlled subset
 - Environment: Gymnasium image enhancement with `max_steps` and `stop` action
 - Reward: step-wise quality delta (PSNR/SSIM) plus penalties/bonuses
 - Agent: DQN with replay buffer and target network
@@ -110,6 +111,31 @@ Run the A/B/C experimental protocol with the new acceptance framework:
 - Phase C: long final runs
 
 Then select the final model only from runs that satisfy the full acceptance suite.
+
+## STL-10 Safe Configuration Update (2026-05-07)
+
+What was added:
+- Alternative dataset config `configs/dataset_stl10_safe.yaml`:
+  - `name=STL10`
+  - `image_size=96`
+  - `train_subset_size=5000`
+  - `eval_subset_size=500`
+- Split helper now supports deterministic subset limiting for train/eval pools.
+- Train/eval scripts apply subset limits from dataset config when specified.
+- Environment now skips resize when input image already matches target size to avoid unnecessary interpolation.
+
+Validation completed (no long training launched):
+- STL-10 load smoke test: sample size confirmed at `96x96`.
+- Visual/degradation smoke test:
+  - 5 clean STL-10 samples
+  - 5 degraded STL-10 samples
+  - PSNR/SSIM degraded vs clean computed
+  - Output grid stored at:
+    `${LOGS_ROOT}/dqn/stl10_safe_validation_20260507/stl10_clean_degraded_grid.png`
+
+Notebook status:
+- `visual_policy_analysis.ipynb` executes end-to-end without runtime cell errors (validated through `nbconvert --execute`).
+- Jupyter runtime dependencies were installed in `venv` (`notebook`, `nbformat`, etc.).
 
 ## Step 1 Closure (Robust Evaluation Gate)
 

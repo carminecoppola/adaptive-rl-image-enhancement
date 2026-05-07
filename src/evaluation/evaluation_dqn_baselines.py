@@ -24,7 +24,7 @@ from src.envs.image_enhancement_env import ImageEnhancementEnv
 from src.metrics import compute_psnr, compute_ssim
 from src.evaluation.baselines import BASELINE_POLICIES, evaluate_baseline_policy
 from src.evaluation.eval_types import AcceptanceChecks, PolicyMetrics, PolicyRow
-from src.utils import load_config, sample_indices, build_train_eval_indices
+from src.utils import load_config, sample_indices, build_train_eval_indices, apply_subset_limits
 
 
 def choose_degradation_type(default_type: str, candidate_types: list[str], key: int) -> str:
@@ -147,6 +147,7 @@ def main() -> None:
     seed = int(train_cfg.get("seed", 42))
     collapse_threshold = float(train_cfg.get("action_collapse_threshold", 0.70))
     min_stop_rate = float(train_cfg.get("min_stop_rate", 0.10))
+    eval_subset_size_cfg = int(dataset_core_cfg.get("eval_subset_size", 0) or 0)
 
     checkpoint_root = Path(os.getenv("CHECKPOINT_ROOT", "checkpoints"))
     local_checkpoint_root = PROJECT_ROOT / "checkpoints"
@@ -166,9 +167,16 @@ def main() -> None:
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     eval_indices = checkpoint.get("eval_indices")
     if not eval_indices:
-        _, eval_indices = build_train_eval_indices(
+        train_indices_auto, eval_indices_auto = build_train_eval_indices(
             dataset_size=len(dataset),
             eval_pool_size=int(train_cfg.get("eval_pool_size", 500)),
+            seed=seed,
+        )
+        _, eval_indices = apply_subset_limits(
+            train_indices=train_indices_auto,
+            eval_indices=eval_indices_auto,
+            train_subset_size=int(dataset_core_cfg.get("train_subset_size", 0) or 0),
+            eval_subset_size=eval_subset_size_cfg,
             seed=seed,
         )
 
@@ -320,6 +328,8 @@ def main() -> None:
     print("\nEvaluation Results (Fixed Eval Split)")
     print("=" * 90)
     print(f"Dataset: {dataset_name} | image_size={image_size[0]}x{image_size[1]}")
+    if eval_subset_size_cfg > 0:
+        print(f"Configured eval_subset_size: {eval_subset_size_cfg}")
     print(f"Checkpoint: {checkpoint_path}")
     print(f"Eval subset size: {len(eval_subset)}")
 

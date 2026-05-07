@@ -42,10 +42,17 @@ class ImageEnhancementEnv(gym.Env):
     ) -> None:
         super().__init__()
 
-        self.clean_image = clean_image.convert("RGB").resize(image_size, Image.Resampling.BICUBIC)
-        self.initial_degraded_image = degraded_image.convert("RGB").resize(
-            image_size,
-            Image.Resampling.BICUBIC,
+        clean_rgb = clean_image.convert("RGB")
+        degraded_rgb = degraded_image.convert("RGB")
+        self.clean_image = (
+            clean_rgb.copy()
+            if clean_rgb.size == image_size
+            else clean_rgb.resize(image_size, Image.Resampling.BICUBIC)
+        )
+        self.initial_degraded_image = (
+            degraded_rgb.copy()
+            if degraded_rgb.size == image_size
+            else degraded_rgb.resize(image_size, Image.Resampling.BICUBIC)
         )
 
         self.max_steps = max_steps
