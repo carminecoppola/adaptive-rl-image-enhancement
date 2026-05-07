@@ -15,17 +15,29 @@ class DQNAgent:
         gamma: float = 0.99,
         lr: float = 1e-4,
         batch_size: int = 32,
+        use_double_dqn: bool = False,
+        use_dueling_dqn: bool = False,
         device=None,
     ):
         self.num_actions = num_actions
         self.epsilon = epsilon
         self.gamma = gamma
         self.batch_size = batch_size
+        self.use_double_dqn = use_double_dqn
+        self.use_dueling_dqn = use_dueling_dqn
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.in_channels = in_channels
 
-        self.policy_net = DQN(num_actions, in_channels=in_channels).to(self.device)
-        self.target_net = DQN(num_actions, in_channels=in_channels).to(self.device)
+        self.policy_net = DQN(
+            num_actions,
+            in_channels=in_channels,
+            use_dueling_dqn=use_dueling_dqn,
+        ).to(self.device)
+        self.target_net = DQN(
+            num_actions,
+            in_channels=in_channels,
+            use_dueling_dqn=use_dueling_dqn,
+        ).to(self.device)
 
         self.update_target_network()
 
@@ -61,7 +73,12 @@ class DQNAgent:
         current_q_values = current_q_values.squeeze(1)
 
         with torch.no_grad():
-            next_q_values = self.target_net(next_states).max(dim=1)[0]
+            if self.use_double_dqn:
+                # Double DQN: action selection from policy_net, action evaluation from target_net.
+                next_actions = self.policy_net(next_states).argmax(dim=1, keepdim=True)
+                next_q_values = self.target_net(next_states).gather(1, next_actions).squeeze(1)
+            else:
+                next_q_values = self.target_net(next_states).max(dim=1)[0]
             target_q_values = rewards + self.gamma * next_q_values * (1.0 - dones)
 
         loss = self.loss_fn(current_q_values, target_q_values)

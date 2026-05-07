@@ -1,6 +1,10 @@
 dataset:
   name: "CIFAR10"
+  # If omitted, defaults are selected by dataset:
+  # CIFAR10 -> 32, STL10 -> 96
   image_size: 32
+  # For STL10 valid splits: train, train+unlabeled, unlabeled, test
+  split: "train"
   train_split: true
   download: true
 

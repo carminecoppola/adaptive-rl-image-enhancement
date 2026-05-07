@@ -110,3 +110,69 @@ Run the A/B/C experimental protocol with the new acceptance framework:
 - Phase C: long final runs
 
 Then select the final model only from runs that satisfy the full acceptance suite.
+
+## Step 1 Closure (Robust Evaluation Gate)
+
+What was fixed:
+- Strict acceptance gate enforced in evaluation with mandatory checks:
+  - `baseline_report_generated`
+  - `mean_delta_psnr_positive`
+  - `output_psnr_ge_input_psnr`
+  - `stop_rate_ok`
+  - `dominant_action_share_ok`
+  - `action_analysis_available`
+- Missing `action_analysis.json` now causes mandatory failure.
+- Evaluation scripts aligned with training for `mixed` degradation and observation channels.
+- Gate report now exports normalized summary metrics in `gate_metrics`:
+  - `input_psnr`, `output_psnr`, `mean_delta_psnr`
+  - `input_ssim`, `output_ssim`, `mean_delta_ssim`
+  - `stop_rate`, `dominant_action_share`, `avg_episode_length`
+- Environment image size is now config-driven from dataset YAML (CIFAR-10 default `32x32`) to avoid artificial blur from `32->128` upscaling in clean/evaluated images.
+
+Validation evidence:
+- Per-run pass/fail is stored in each `evaluation_baselines.json`.
+- Cross-run summary is stored in `${LOGS_ROOT}/dqn/run_comparison.json`.
+- Known bad checkpoints are correctly rejected when PSNR delta is negative.
+
+Validated examples (Step 1 closure batch):
+- `dqn_1444_20260506_105528`: behavior checks pass, quality checks fail (`acceptance_passed=false`).
+- `dqn_1441_20260506_103453`: behavior checks pass, quality checks fail (`acceptance_passed=false`).
+- `dqn_1443_20260506_105047`: quality checks pass, stop-rate check fails (`acceptance_passed=false`).
+- Regression strictness test with isolated `LOGS_ROOT` (missing diagnostics): `action_analysis_available=false` and `acceptance_passed=false`.
+
+Current known limitation:
+- Even with a correct gate, many runs can still fail if policy quality is poor; this is expected and indicates the next work should target training stability/reward refinement, not gate logic changes.
+
+## Phase 3A Progress (Reward Tuning, Double DQN Fixed)
+
+Controlled runs were executed with identical training settings (`use_double_dqn=true`, `use_dueling_dqn=false`, 260 episodes) and reward-only changes:
+- `dqn_phase3a_control_20260506_122118` (control)
+- `dqn_phase3a_treatment_20260506_123200` (stop-aware conservative v1)
+- `dqn_phase3a_treatment2_20260506_124100` (stop-aware conservative v2)
+
+Observed trend:
+- `stop_rate`: `0.024` -> `0.041` -> `0.055` (improving but still below threshold `0.10`)
+- `mean_delta_psnr`: `-1.512` -> `-0.990` -> `+0.703` (quality alignment recovered in v2)
+
+Current interpretation:
+- Reward tuning is moving behavior in the expected direction.
+- The latest run is quality-positive and interpretable, but full gate pass is still blocked by stop-rate.
+
+## Behavior + OOD Evidence for Presentation
+
+Run used for evidence:
+- `dqn_phase3a_treatment2_20260506_124100`
+
+In-distribution (ID) result:
+- `mean_delta_psnr = +0.7033`
+- `output_psnr_ge_input_psnr = true`
+- `stop_rate = 0.0546`
+
+Out-of-distribution (OOD) stress check:
+- Protocol: evaluation-only with stronger noise (`gaussian_noise`, `noise_std=0.2`), same checkpoint.
+- `mean_delta_psnr = -1.9320`
+- `stop_rate = 0.0925`
+
+Takeaway:
+- The agent can improve images in-distribution but does not yet generalize robustly under stronger degradations.
+- This supports the project narrative: the work now provides measurable policy behavior and failure visibility, enabling targeted iteration.

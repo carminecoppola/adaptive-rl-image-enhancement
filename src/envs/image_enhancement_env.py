@@ -26,7 +26,7 @@ class ImageEnhancementEnv(gym.Env):
         clean_image: Image.Image,
         degraded_image: Image.Image,
         max_steps: int = 10,
-        image_size: tuple[int, int] = (128, 128),
+        image_size: tuple[int, int] = (32, 32),
         reward_metric: str = "psnr",
         step_penalty: float = 0.01,
         repeated_action_penalty: float = 0.0,
