@@ -10,7 +10,7 @@ import torch
 from gymnasium import spaces
 from typing import cast
 
-# Allow direct execution (python src/evaluation/evaluation_dqn_baselines.py) by adding
+# Allow direct execution (python src/evaluation/evaluate.py) by adding
 # project root to sys.path for absolute imports from `src`.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -20,7 +20,7 @@ from src.actions.filters import ImageAction
 from src.agents import DQNAgent
 from src.data import get_dataset_name, get_effective_image_size, load_train_dataset
 from src.data.degradation import degrade_image
-from src.envs.image_enhancement_env import ImageEnhancementEnv
+from src.envs.env import ImageEnhancementEnv
 from src.metrics import compute_psnr, compute_ssim
 from src.evaluation.baselines import BASELINE_POLICIES, evaluate_baseline_policy
 from src.evaluation.eval_types import AcceptanceChecks, PolicyMetrics, PolicyRow

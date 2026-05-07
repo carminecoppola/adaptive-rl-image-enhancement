@@ -11,7 +11,7 @@ from PIL import Image
 from src.actions.filters import ImageAction, get_action_name
 from src.agents import DQNAgent
 from src.data.degradation import degrade_image
-from src.envs.image_enhancement_env import ImageEnhancementEnv
+from src.envs.env import ImageEnhancementEnv
 from src.metrics import compute_psnr, compute_ssim
 from src.training.dqn_types import EvalStats
 

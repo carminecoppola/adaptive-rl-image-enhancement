@@ -1,3 +1,3 @@
-from src.envs.image_enhancement_env import ImageEnhancementEnv
+from src.envs.env import ImageEnhancementEnv
 
 __all__ = ["ImageEnhancementEnv"]

@@ -162,7 +162,7 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     analyze_script = PROJECT_ROOT / "src" / "evaluation" / "analyze_dqn_actions.py"
-    eval_script = PROJECT_ROOT / "src" / "evaluation" / "evaluation_dqn_baselines.py"
+    eval_script = PROJECT_ROOT / "src" / "evaluation" / "evaluate.py"
 
     # ID
     run_cmd(
