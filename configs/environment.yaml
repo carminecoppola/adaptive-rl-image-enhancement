@@ -30,3 +30,6 @@ reward:
   stop_action_bonus: 0.04
   terminal_reward_psnr_scale: 1.5
   terminal_reward_ssim_scale: 0.0
+  # Color cast reward (underwater domain)
+  color_cast_weight: 0.15
+  color_cast_improvement_scale: 0.5
