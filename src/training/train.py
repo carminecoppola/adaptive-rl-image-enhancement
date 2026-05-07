@@ -1,8 +1,9 @@
+import argparse
 import os
 import random
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -40,10 +41,56 @@ from src.training.dqn_types import EpisodeSummaryRow, EvalHistoryRow, ResolvedCo
 from src.utils import load_config, build_train_eval_indices, sample_indices, apply_subset_limits
 
 
+def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """
+    Recursively merge override dict into base dict.
+    Override values take precedence for leaf values.
+    """
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge_dicts(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def train() -> None:
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Train DDQN agent for image enhancement")
+    parser.add_argument(
+        "--experiment",
+        type=str,
+        default=None,
+        help="Experiment name (e.g., 'exp_A_cifar_baseline'). "
+             "If provided, loads from configs/experiments/{experiment}.yaml and merges with base configs.",
+    )
+    args = parser.parse_args()
+    
+    # Load base configurations
     dataset_config = load_config("configs/dataset.yaml")
     env_config_all = load_config("configs/environment.yaml")
     training_config_all = load_config("configs/training.yaml")
+    
+    # If experiment is specified, load and merge experiment config
+    if args.experiment:
+        experiment_path = Path("configs/experiments") / f"{args.experiment}.yaml"
+        if not experiment_path.exists():
+            raise FileNotFoundError(f"Experiment config not found: {experiment_path}")
+        
+        experiment_config = load_config(str(experiment_path))
+        
+        # Merge experiment config into base configs (experiment overrides base)
+        dataset_config = deep_merge_dicts(dataset_config, experiment_config.get("dataset", {}))
+        env_config_all = deep_merge_dicts(env_config_all, experiment_config)
+        training_config_all = deep_merge_dicts(training_config_all, experiment_config)
+        
+        print(f"[EXPERIMENT] Loaded experiment config: {args.experiment}")
+        print(f"[EXPERIMENT] Config file: {experiment_path}")
+        if "metadata" in experiment_config:
+            metadata = experiment_config["metadata"]
+            print(f"[EXPERIMENT] Name: {metadata.get('name', 'N/A')}")
+            print(f"[EXPERIMENT] Description: {metadata.get('description', 'N/A')}")
 
     env_config = env_config_all.get("environment", {})
     reward_config = env_config_all.get("reward", {})
@@ -70,6 +117,8 @@ def train() -> None:
     stop_action_bonus = float(reward_config.get("stop_action_bonus", 0.0))
     terminal_reward_psnr_scale = float(reward_config.get("terminal_reward_psnr_scale", 0.0))
     terminal_reward_ssim_scale = float(reward_config.get("terminal_reward_ssim_scale", 0.0))
+    color_cast_weight = float(reward_config.get("color_cast_weight", 0.0))
+    color_cast_improvement_scale = float(reward_config.get("color_cast_improvement_scale", 0.5))
 
     default_degradation_type = degradation_config.get("type", "gaussian_noise")
     candidate_degradation_types = degradation_config.get("candidate_types", [])
@@ -136,6 +185,8 @@ def train() -> None:
         stop_action_bonus=stop_action_bonus,
         terminal_reward_psnr_scale=terminal_reward_psnr_scale,
         terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+        color_cast_weight=color_cast_weight,
+        color_cast_improvement_scale=color_cast_improvement_scale,
         include_step_channel=include_step_channel,
         degradation_type=sample_degradation_type,
         noise_std=noise_std,
@@ -233,6 +284,8 @@ def train() -> None:
             stop_action_bonus=stop_action_bonus,
             terminal_reward_psnr_scale=terminal_reward_psnr_scale,
             terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+            color_cast_weight=color_cast_weight,
+            color_cast_improvement_scale=color_cast_improvement_scale,
             include_step_channel=include_step_channel,
             degradation_type=episode_degradation_type,
             noise_std=noise_std,
@@ -358,6 +411,8 @@ def train() -> None:
                 stop_action_bonus=stop_action_bonus,
                 terminal_reward_psnr_scale=terminal_reward_psnr_scale,
                 terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+                color_cast_weight=color_cast_weight,
+                color_cast_improvement_scale=color_cast_improvement_scale,
                 include_step_channel=include_step_channel,
                 default_degradation_type=default_degradation_type,
                 candidate_degradation_types=candidate_degradation_types,

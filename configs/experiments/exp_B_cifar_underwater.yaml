@@ -1,0 +1,95 @@
+# Experiment B: CIFAR-10 with Underwater Physics Degradation
+#
+# Purpose: Train agent on underwater-simulated degradation to learn
+# underwater-specific enhancement actions before real UIEB data
+#
+# Configuration:
+# - Dataset: CIFAR-10 (32x32, synthetic but with underwater physics simulation)
+# - Degradation: Physics-based underwater (red absorption, backscatter, contrast loss)
+# - Actions: Full action set including underwater-specific (RED, LAB, CLAHE, SATURATION)
+# - Reward: PSNR + color cast reward (underwater domain focus)
+# - Training: 500 episodes (medium length for underwater adaptation)
+
+# Dataset configuration
+dataset:
+  name: "CIFAR10"
+  image_size: 32
+  split: "train"
+  download: true
+
+degradation:
+  # Use physics-based underwater degradation to simulate real underwater conditions
+  type: "underwater"
+  noise_std: 0.1
+  brightness_factor: 0.6
+  contrast_factor: 0.6
+  blur_radius: 1.0
+  # Underwater simulation parameters
+  underwater:
+    depth: 5.0          # Medium depth (0-10 scale)
+    turbidity: 0.5      # Medium turbidity (0-1 scale)
+
+# Environment configuration (with underwater-specific actions)
+environment:
+  max_steps: 5
+  include_step_channel: true
+  action_space:
+    # Standard enhancement actions
+    - increase_brightness      # 0
+    - decrease_brightness      # 1
+    - increase_contrast        # 2
+    - decrease_contrast        # 3
+    - gaussian_denoise         # 4
+    - sharpen                  # 5
+    - gamma_up                 # 6
+    - gamma_down               # 7
+    - stop                     # 8
+    # Underwater-specific actions
+    - red_channel_boost        # 9 — compensate for red absorption
+    - lab_color_balance        # 10 — white balance in LAB space
+    - clahe                    # 11 — contrast-limited adaptive histogram eq.
+    - saturation_boost         # 12 — restore desaturated colors
+
+# Reward configuration (PSNR + color cast for underwater domain)
+reward:
+  use_psnr: true
+  use_ssim: false
+  step_penalty: 0.011
+  repeated_action_penalty: 0.05
+  no_improvement_penalty: 0.03
+  stop_bonus_scale: 0.3
+  stop_no_improvement_penalty: 0.04
+  early_stop_min_improvement: 0.01
+  truncate_without_stop_penalty: 0.75
+  stop_action_bonus: 0.04
+  terminal_reward_psnr_scale: 1.5
+  terminal_reward_ssim_scale: 0.0
+  # Color cast reward enabled for underwater domain adaptation
+  color_cast_weight: 0.15
+  color_cast_improvement_scale: 0.5
+
+# Training configuration (medium length for adaptation)
+training:
+  algorithm: DDQN
+  use_double_dqn: true
+  num_episodes: 500
+  learning_rate: 0.0001
+  batch_size: 64
+  gamma: 0.99
+  epsilon_start: 1.0
+  epsilon_end: 0.08
+  epsilon_decay: 0.9985
+  memory_size: 10000
+  target_update_frequency: 10
+  gradient_clip_norm: 1.0
+  save_checkpoint_frequency: 50
+  log_frequency: 10
+
+# Metadata
+metadata:
+  name: "exp_B_cifar_underwater"
+  description: "Domain adaptation: CIFAR-10 with physics-based underwater degradation and underwater-specific actions"
+  domain: "synthetic_underwater"
+  focus: "Learn underwater-specific image enhancement strategies"
+  expected_duration_min: "30-40"
+  notes: "Bridges gap between standard enhancement (exp_A) and real underwater (exp_C)"
