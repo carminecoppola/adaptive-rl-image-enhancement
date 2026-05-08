@@ -9,7 +9,7 @@ import numpy as np
 from gymnasium import spaces
 from PIL import Image
 
-from src.actions.filters import ImageAction, apply_action, get_action_name
+from src.actions import apply_action_to_pil, get_action_name, get_num_actions, get_stop_action_id
 from src.metrics import compute_psnr, compute_ssim
 
 
@@ -39,6 +39,7 @@ class ImageEnhancementEnv(gym.Env):
         terminal_reward_psnr_scale: float = 0.0,
         terminal_reward_ssim_scale: float = 0.0,
         include_step_channel: bool = True,
+        action_set_name: str = "general",
     ) -> None:
         super().__init__()
 
@@ -69,9 +70,10 @@ class ImageEnhancementEnv(gym.Env):
         self.terminal_reward_psnr_scale = terminal_reward_psnr_scale
         self.terminal_reward_ssim_scale = terminal_reward_ssim_scale
         self.include_step_channel = include_step_channel
+        self.action_set_name = action_set_name
 
-        self.num_actions = len(ImageAction)
-        self.stop_action = int(ImageAction.STOP)
+        self.num_actions = get_num_actions(action_set_name)
+        self.stop_action = get_stop_action_id(action_set_name)
 
         height, width = image_size[1], image_size[0]
 
@@ -133,7 +135,7 @@ class ImageEnhancementEnv(gym.Env):
         previous_quality = self.previous_quality
 
         if not terminated:
-            self.current_image = apply_action(self.current_image, action)
+            self.current_image = apply_action_to_pil(self.current_image, action, self.action_set_name)
 
         current_quality = self._compute_quality(self.current_image)
 
@@ -196,7 +198,7 @@ class ImageEnhancementEnv(gym.Env):
         info = {
             "step": self.current_step,
             "action": action,
-            "action_name": get_action_name(action),
+            "action_name": get_action_name(self.action_set_name, action),
             "quality": current_quality,
             "previous_quality": previous_quality,
             "delta_quality": float(delta_quality),

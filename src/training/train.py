@@ -16,7 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.agents import DQNAgent, ReplayBuffer
-from src.actions.filters import ImageAction
+from src.actions import get_stop_action_id
 from src.data import get_dataset_name, get_effective_image_size, load_train_dataset
 from src.training.dqn_artifacts import (
     build_checkpoint_payload,
@@ -24,6 +24,7 @@ from src.training.dqn_artifacts import (
 )
 from src.training.dqn_training_helpers import (
     build_env_for_image,
+    extract_clean_and_degraded_images,
     choose_degradation_type,
     compute_action_entropy,
     compute_action_repeat_ratio,
@@ -65,6 +66,12 @@ def train() -> None:
         help="Experiment name (e.g., 'phase_a_sanity'). "
              "If provided, loads from configs/experiments/{experiment}.yaml and merges with base configs.",
     )
+    parser.add_argument(
+        "--phase",
+        type=str,
+        default=None,
+        help="Optional phase override inside the experiment config (for example: smoke_test, full_training).",
+    )
     args = parser.parse_args()
     
     # Load base configurations
@@ -81,7 +88,14 @@ def train() -> None:
         experiment_config = load_config(str(experiment_path))
         
         # Merge experiment config into base configs (experiment overrides base)
-        dataset_config = deep_merge_dicts(dataset_config, experiment_config.get("dataset", {}))
+        # IMPORTANT: Preserve nested structure by wrapping dataset config
+        dataset_config = deep_merge_dicts(
+            dataset_config,
+            {
+                "dataset": experiment_config.get("dataset", {}),
+                "degradation": experiment_config.get("degradation", {}),
+            },
+        )
         env_config_all = deep_merge_dicts(env_config_all, experiment_config)
         training_config_all = deep_merge_dicts(training_config_all, experiment_config)
         
@@ -92,9 +106,33 @@ def train() -> None:
             print(f"[EXPERIMENT] Name: {metadata.get('name', 'N/A')}")
             print(f"[EXPERIMENT] Description: {metadata.get('description', 'N/A')}")
 
+        if args.phase:
+            phase_override = experiment_config.get(args.phase)
+            if not isinstance(phase_override, dict):
+                available_phases = sorted(
+                    key for key, value in experiment_config.items()
+                    if isinstance(value, dict) and ("training" in value or "dataset" in value or "evaluation" in value)
+                )
+                raise KeyError(
+                    f"Phase override '{args.phase}' not found in {experiment_path}. "
+                    f"Available structured phases: {available_phases}"
+                )
+
+            dataset_config = deep_merge_dicts(
+                dataset_config,
+                {
+                    "dataset": phase_override.get("dataset", {}),
+                    "degradation": phase_override.get("degradation", {}),
+                },
+            )
+            env_config_all = deep_merge_dicts(env_config_all, phase_override)
+            training_config_all = deep_merge_dicts(training_config_all, phase_override)
+            print(f"[EXPERIMENT] Applied phase override: {args.phase}")
+
     env_config = env_config_all.get("environment", {})
     reward_config = env_config_all.get("reward", {})
     training_config = training_config_all.get("training", {})
+    evaluation_config = env_config_all.get("evaluation", {})
     dataset_core_cfg = dataset_config.get("dataset", {})
     degradation_config = dataset_config.get("degradation", {})
 
@@ -105,7 +143,17 @@ def train() -> None:
     dataset_image_size = get_effective_image_size(dataset_core_cfg)
     image_size = (dataset_image_size, dataset_image_size)
     include_step_channel = bool(env_config.get("include_step_channel", True))
-    reward_metric = "psnr" if bool(reward_config.get("use_psnr", True)) else "ssim"
+    action_set_name = str(env_config.get("action_set", "general"))
+    use_psnr = bool(reward_config.get("use_psnr", True))
+    use_ssim = bool(reward_config.get("use_ssim", False))
+    if use_psnr and use_ssim:
+        reward_metric = "combined"
+    elif use_psnr:
+        reward_metric = "psnr"
+    elif use_ssim:
+        reward_metric = "ssim"
+    else:
+        raise ValueError("At least one of reward.use_psnr or reward.use_ssim must be enabled.")
 
     step_penalty = float(reward_config.get("step_penalty", 0.01))
     repeated_action_penalty = float(reward_config.get("repeated_action_penalty", 0.0))
@@ -132,10 +180,10 @@ def train() -> None:
     use_double_dqn = bool(training_config.get("use_double_dqn", True))
     use_dueling_dqn = bool(training_config.get("use_dueling_dqn", False))
     lr = float(training_config.get("learning_rate", 1e-4))
-    buffer_size = int(training_config.get("buffer_size", 50_000))
-    target_update_every = int(training_config.get("target_update_every", 5))
-    eval_every = int(training_config.get("eval_every", 10))
-    num_eval_episodes = int(training_config.get("num_eval_episodes", 20))
+    buffer_size = int(training_config.get("buffer_size", training_config.get("replay_buffer_size", 50_000)))
+    target_update_every = int(training_config.get("target_update_every", training_config.get("target_update_frequency", 5)))
+    eval_every = int(training_config.get("eval_every", training_config.get("checkpoint_frequency", 10)))
+    num_eval_episodes = int(training_config.get("num_eval_episodes", evaluation_config.get("subset_size", 20)))
     epsilon_start = float(training_config.get("epsilon_start", 1.0))
     epsilon_end = float(training_config.get("epsilon_end", 0.05))
     epsilon_decay = float(training_config.get("epsilon_decay", 0.995))
@@ -159,6 +207,13 @@ def train() -> None:
         eval_subset_size=eval_subset_size,
         seed=seed,
     )
+    eval_tracking_subset = sample_indices(
+        eval_indices,
+        k=min(num_eval_episodes, len(eval_indices)),
+        seed=seed + 20_240,
+    )
+    if not eval_tracking_subset:
+        raise RuntimeError("Empty eval_tracking_subset: check eval indices and evaluation subset size.")
 
     sample_degradation_type = choose_degradation_type(
         default_type=default_degradation_type,
@@ -167,9 +222,9 @@ def train() -> None:
     )
     if not train_indices:
         raise RuntimeError("Empty train_indices: check eval_pool_size/dataset split configuration.")
-    sample_image, _ = train_dataset[train_indices[0]]
+    sample_clean_image, sample_degraded_image = extract_clean_and_degraded_images(train_dataset[train_indices[0]])
     sample_env = build_env_for_image(
-        clean_image=sample_image.convert("RGB"),
+        clean_image=sample_clean_image,
         max_steps=max_steps,
         image_size=image_size,
         reward_metric=reward_metric,
@@ -184,8 +239,10 @@ def train() -> None:
         terminal_reward_psnr_scale=terminal_reward_psnr_scale,
         terminal_reward_ssim_scale=terminal_reward_ssim_scale,
         include_step_channel=include_step_channel,
+        action_set_name=action_set_name,
         degradation_type=sample_degradation_type,
         noise_std=noise_std,
+        degraded_image=sample_degraded_image,
     )
     action_space = cast(spaces.Discrete, sample_env.action_space)
     obs_shape = sample_env.observation_space.shape
@@ -202,6 +259,7 @@ def train() -> None:
     run_ckpt_dir = run_paths.run_ckpt_dir
 
     debug_writer, debug_file_handle, debug_episodes = create_debug_writer(run_log_dir)
+    stop_action_id = get_stop_action_id(action_set_name)
 
     agent = DQNAgent(
         num_actions=num_actions,
@@ -232,6 +290,8 @@ def train() -> None:
         f"eval={eval_subset_size if eval_subset_size > 0 else 'full'}) "
         f"data_root={dataset_root}"
     )
+    print(f"[EVAL] fixed_tracking_subset={len(eval_tracking_subset)} | eval_every={eval_every}")
+    print(f"[ACTION_SET] {action_set_name} | num_actions={num_actions}")
     print(
         f"[DEGRADATION] default_type={default_degradation_type} "
         f"candidate_types={candidate_degradation_types if candidate_degradation_types else [default_degradation_type]}"
@@ -256,10 +316,10 @@ def train() -> None:
             key=image_idx + episode_seed,
         )
 
-        clean_image, _ = train_dataset[image_idx]
+        clean_image, degraded_image = extract_clean_and_degraded_images(train_dataset[image_idx])
         
         env = build_env_for_image(
-            clean_image=clean_image.convert("RGB"),
+            clean_image=clean_image,
             max_steps=max_steps,
             image_size=image_size,
             reward_metric=reward_metric,
@@ -274,8 +334,10 @@ def train() -> None:
             terminal_reward_psnr_scale=terminal_reward_psnr_scale,
             terminal_reward_ssim_scale=terminal_reward_ssim_scale,
             include_step_channel=include_step_channel,
+            action_set_name=action_set_name,
             degradation_type=episode_degradation_type,
             noise_std=noise_std,
+            degraded_image=degraded_image,
         )
 
         state, _ = env.reset(seed=episode_seed)
@@ -287,7 +349,7 @@ def train() -> None:
         for step in range(max_steps):
             action = agent.select_action(state)
             episode_actions.append(action)
-            if action == int(ImageAction.STOP):
+            if action == stop_action_id:
                 stop_used = 1
 
             next_state, reward, terminated, truncated, info = env.step(action)
@@ -374,15 +436,10 @@ def train() -> None:
         )
 
         if episode % eval_every == 0:
-            eval_subset = sample_indices(
-                eval_indices,
-                k=num_eval_episodes,
-                seed=seed + episode,
-            )
             eval_stats = evaluate_on_indices(
                 agent=agent,
                 dataset=train_dataset,
-                eval_indices=eval_subset,
+                eval_indices=eval_tracking_subset,
                 eval_step_seed=seed + 10_000 + episode,
                 max_steps=max_steps,
                 image_size=image_size,
@@ -398,6 +455,7 @@ def train() -> None:
                 terminal_reward_psnr_scale=terminal_reward_psnr_scale,
                 terminal_reward_ssim_scale=terminal_reward_ssim_scale,
                 include_step_channel=include_step_channel,
+                action_set_name=action_set_name,
                 default_degradation_type=default_degradation_type,
                 candidate_degradation_types=candidate_degradation_types,
                 noise_std=noise_std,
@@ -407,7 +465,7 @@ def train() -> None:
                 EvalHistoryRow(
                     **eval_stats,
                     episode=float(episode),
-                    eval_subset=list(eval_subset),
+                    eval_subset=list(eval_tracking_subset),
                 )
             )
 
@@ -415,7 +473,7 @@ def train() -> None:
             best_state = maybe_update_best_checkpoint(
                 run_state=best_state,
                 eval_stats=eval_stats,
-                eval_subset=eval_subset,
+                eval_subset=eval_tracking_subset,
                 episode=episode,
                 run_ckpt_dir=run_ckpt_dir,
                 agent=agent,
@@ -451,6 +509,7 @@ def train() -> None:
         "seed": seed,
         "dataset_root": dataset_root,
         "reward_metric": reward_metric,
+        "action_set_name": action_set_name,
         "default_degradation_type": default_degradation_type,
         "candidate_degradation_types": candidate_degradation_types,
         "noise_std": noise_std,

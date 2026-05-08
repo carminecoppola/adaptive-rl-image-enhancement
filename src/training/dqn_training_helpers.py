@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from src.actions.filters import ImageAction, get_action_name
+from src.actions import get_action_name, get_stop_action_id
 from src.agents import DQNAgent
 from src.data.degradation import degrade_image
 from src.envs.env import ImageEnhancementEnv
@@ -43,11 +43,35 @@ def compute_action_repeat_ratio(actions: list[int]) -> float:
 
 
 def choose_degradation_type(default_type: str, candidate_types: list[str], key: int) -> str:
+    if default_type == "none":
+        return "none"
     if default_type != "mixed":
         return default_type
     if not candidate_types:
         return "gaussian_noise"
     return candidate_types[key % len(candidate_types)]
+
+
+def extract_clean_and_degraded_images(sample: tuple[Any, Any]) -> tuple[Image.Image, Image.Image | None]:
+    """
+    Normalize dataset samples across synthetic and paired datasets.
+
+    Returns:
+        clean_image: Reference image used for reward/evaluation.
+        degraded_image: Optional degraded input image when dataset is already paired.
+    """
+    image, metadata = sample
+    degraded_image = image.convert("RGB") if isinstance(image, Image.Image) else image
+
+    if isinstance(metadata, dict) and "reference_pil" in metadata:
+        reference_pil = metadata["reference_pil"]
+        if not isinstance(reference_pil, Image.Image):
+            raise TypeError("Expected metadata['reference_pil'] to be a PIL image.")
+        return reference_pil.convert("RGB"), degraded_image
+
+    if not isinstance(degraded_image, Image.Image):
+        raise TypeError("Expected dataset sample image to be a PIL image.")
+    return degraded_image, None
 
 
 def build_env_for_image(
@@ -66,6 +90,7 @@ def build_env_for_image(
     terminal_reward_psnr_scale: float,
     terminal_reward_ssim_scale: float,
     include_step_channel: bool,
+    action_set_name: str,
     degradation_type: str,
     noise_std: float,
     degraded_image: Image.Image | None = None,
@@ -78,11 +103,14 @@ def build_env_for_image(
         degraded_image: Optional precomputed degraded image.
     """
     if degraded_image is None:
-        degraded_image = degrade_image(
-            clean_image,
-            degradation_type=degradation_type,
-            noise_std=noise_std,
-        )
+        if degradation_type == "none":
+            degraded_image = clean_image.copy()
+        else:
+            degraded_image = degrade_image(
+                clean_image,
+                degradation_type=degradation_type,
+                noise_std=noise_std,
+            )
     return ImageEnhancementEnv(
         clean_image=clean_image,
         degraded_image=degraded_image,
@@ -100,6 +128,7 @@ def build_env_for_image(
         terminal_reward_psnr_scale=terminal_reward_psnr_scale,
         terminal_reward_ssim_scale=terminal_reward_ssim_scale,
         include_step_channel=include_step_channel,
+        action_set_name=action_set_name,
     )
 
 
@@ -122,6 +151,7 @@ def evaluate_on_indices(
     terminal_reward_psnr_scale: float,
     terminal_reward_ssim_scale: float,
     include_step_channel: bool,
+    action_set_name: str,
     default_degradation_type: str,
     candidate_degradation_types: list[str],
     noise_std: float,
@@ -135,6 +165,7 @@ def evaluate_on_indices(
     stop_count = 0
     delta_psnr_values: list[float] = []
     delta_ssim_values: list[float] = []
+    stop_action_id = get_stop_action_id(action_set_name)
 
     for offset, idx in enumerate(eval_indices):
         degradation_type = choose_degradation_type(
@@ -142,9 +173,9 @@ def evaluate_on_indices(
             candidate_types=candidate_degradation_types,
             key=idx + eval_step_seed,
         )
-        clean_image, _ = dataset[idx]
+        clean_image, degraded_image = extract_clean_and_degraded_images(dataset[idx])
         env = build_env_for_image(
-            clean_image=clean_image.convert("RGB"),
+            clean_image=clean_image,
             max_steps=max_steps,
             image_size=image_size,
             reward_metric=reward_metric,
@@ -159,8 +190,10 @@ def evaluate_on_indices(
             terminal_reward_psnr_scale=terminal_reward_psnr_scale,
             terminal_reward_ssim_scale=terminal_reward_ssim_scale,
             include_step_channel=include_step_channel,
+            action_set_name=action_set_name,
             degradation_type=degradation_type,
             noise_std=noise_std,
+            degraded_image=degraded_image,
         )
         state, _ = env.reset(seed=eval_step_seed + offset)
         clean_eval = env.clean_image
@@ -171,8 +204,8 @@ def evaluate_on_indices(
         for _ in range(max_steps):
             action = agent.select_action(state)
             step_actions.append(action)
-            action_counter[get_action_name(action)] += 1
-            if action == int(ImageAction.STOP):
+            action_counter[get_action_name(action_set_name, action)] += 1
+            if action == stop_action_id:
                 stop_count += 1
             next_state, reward, terminated, truncated, _ = env.step(action)
             state = next_state

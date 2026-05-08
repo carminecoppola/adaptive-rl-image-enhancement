@@ -2,6 +2,7 @@
 set -euo pipefail
 
 EXPERIMENT="${1:-}"
+PHASE="${2:-}"
 
 source venv/bin/activate
 
@@ -14,8 +15,12 @@ else
   exit 1
 fi
 
+cmd=(python src/training/train.py)
 if [ -n "$EXPERIMENT" ]; then
-  python src/training/train.py --experiment "$EXPERIMENT"
-else
-  python src/training/train.py
+  cmd+=(--experiment "$EXPERIMENT")
 fi
+if [ -n "$PHASE" ]; then
+  cmd+=(--phase "$PHASE")
+fi
+
+"${cmd[@]}"

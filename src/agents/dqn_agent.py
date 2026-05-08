@@ -82,9 +82,12 @@ class DQNAgent:
             self.batch_size,
             device=self.device,
         )
+        rewards = torch.nan_to_num(rewards, nan=0.0, posinf=10.0, neginf=-10.0).clamp(-10.0, 10.0)
 
         current_q_values = self.policy_net(states).gather(1, actions.unsqueeze(1))
         current_q_values = current_q_values.squeeze(1)
+        if not torch.isfinite(current_q_values).all():
+            return None
 
         with torch.no_grad():
             if self.use_double_dqn:
@@ -94,8 +97,11 @@ class DQNAgent:
             else:
                 next_q_values = self.target_net(next_states).max(dim=1)[0]
             target_q_values = rewards + self.gamma * next_q_values * (1.0 - dones)
+            target_q_values = torch.nan_to_num(target_q_values, nan=0.0, posinf=10.0, neginf=-10.0).clamp(-20.0, 20.0)
 
         loss = self.loss_fn(current_q_values, target_q_values)
+        if not torch.isfinite(loss):
+            return None
 
         self.optimizer.zero_grad()
         loss.backward()

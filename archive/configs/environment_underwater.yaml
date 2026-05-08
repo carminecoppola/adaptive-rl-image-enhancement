@@ -1,0 +1,71 @@
+# Underwater Image Enhancement Environment Configuration
+
+environment:
+  name: "underwater_image_enhancement"
+  description: "RL environment for underwater image enhancement via 20 discrete actions"
+  
+  # MDP parameters
+  max_steps: 5  # Maximum enhancement operations per image
+  include_step_channel: true  # Add step number to state embedding (prevents infinite loops)
+  
+  # Action set
+  action_set: "underwater_v1"  # References src/actions/underwater_v1.py with 20 operators
+  
+  # Action list (for reference)
+  actions:
+    - id: 0
+      name: "WHITE_BALANCE"
+      description: "Grayworld white balance in CIELAB space"
+    - id: 1
+      name: "BRIGHTNESS_UP"
+      description: "Increase brightness (factor=1.15)"
+    - id: 2
+      name: "BRIGHTNESS_DOWN"
+      description: "Decrease brightness (factor=0.85)"
+    - id: 3
+      name: "CONTRAST_UP"
+      description: "Increase contrast (factor=1.15)"
+    - id: 4
+      name: "CONTRAST_DOWN"
+      description: "Decrease contrast (factor=0.85)"
+    - id: 5
+      name: "RED_CHANNEL_BOOST"
+      description: "Multiply red channel by 1.5 (restore wavelength)"
+    - id: 6
+      name: "GAMMA_UP"
+      description: "Gamma correction up (gamma=0.85, brighten)"
+    - id: 7
+      name: "GAMMA_DOWN"
+      description: "Gamma correction down (gamma=1.15, darken)"
+    - id: 8
+      name: "GAUSSIAN_DENOISE"
+      description: "Gaussian blur denoise (radius=0.7)"
+    - id: 9
+      name: "SHARPEN"
+      description: "Sharpen filter"
+    - id: 10
+      name: "EMBOSS"
+      description: "Emboss filter (alpha=0.05)"
+    - id: 11
+      name: "HISTOGRAM_EQ"
+      description: "Global histogram equalization"
+    - id: 12
+      name: "CLAHE"
+      description: "Contrast Limited Adaptive Histogram Equalization"
+    - id: 13
+      name: "DCP"
+      description: "Dark Channel Prior dehazing (w=0.95)"
+    - id: 14-18
+      name: "RESERVED"
+      description: "Reserved for future expansion"
+    - id: 19
+      name: "STOP"
+      description: "Terminate episode (no more operations)"
+  
+  # Observation space
+  observation_type: "features"  # Feature-based state (not raw image)
+  observation_dim: 12096  # CIELAB histogram (8000) + VGG-19 fc1 (4096)
+  
+  # Color space for degradation simulation (if needed)
+  degradation:
+    type: "none"  # UIEB is already degraded; no additional degradation needed

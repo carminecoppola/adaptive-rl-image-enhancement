@@ -19,20 +19,16 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.actions.filters import ImageAction
 from src.agents import DQNAgent
 from src.data import get_dataset_name, get_effective_image_size, load_train_dataset
-from src.data.degradation import degrade_image
-from src.envs.env import ImageEnhancementEnv
+from src.evaluation.run_context import load_run_config_bundle
 from src.metrics import compute_psnr, compute_ssim
 from src.evaluation.baselines import BASELINE_POLICIES, evaluate_baseline_policy
 from src.evaluation.eval_types import AcceptanceChecks, PolicyMetrics, PolicyRow
-from src.utils import load_config, sample_indices, build_train_eval_indices, apply_subset_limits
-
-
-def choose_degradation_type(default_type: str, candidate_types: list[str], key: int) -> str:
-    if default_type != "mixed":
-        return default_type
-    if not candidate_types:
-        return "gaussian_noise"
-    return candidate_types[key % len(candidate_types)]
+from src.training.dqn_training_helpers import (
+    build_env_for_image,
+    choose_degradation_type,
+    extract_clean_and_degraded_images,
+)
+from src.utils import sample_indices, build_train_eval_indices, apply_subset_limits
 
 
 def parse_args() -> argparse.Namespace:
@@ -71,35 +67,6 @@ def infer_use_dueling_from_checkpoint(checkpoint: dict) -> bool:
     return any(k.startswith("value_head.") or k.startswith("advantage_head.") for k in state_dict.keys())
 
 
-def build_env_for_image(
-    clean_image,
-    max_steps,
-    image_size: tuple[int, int],
-    reward_metric,
-    reward_cfg,
-    degradation_type: str,
-    noise_std: float,
-):
-    degraded = degrade_image(
-        clean_image,
-        degradation_type=degradation_type,
-        noise_std=noise_std,
-    )
-    return ImageEnhancementEnv(
-        clean_image=clean_image,
-        degraded_image=degraded,
-        max_steps=max_steps,
-        image_size=image_size,
-        reward_metric=reward_metric,
-        step_penalty=float(reward_cfg.get("step_penalty", 0.01)),
-        repeated_action_penalty=float(reward_cfg.get("repeated_action_penalty", 0.0)),
-        no_improvement_penalty=float(reward_cfg.get("no_improvement_penalty", 0.0)),
-        stop_bonus_scale=float(reward_cfg.get("stop_bonus_scale", 0.0)),
-        stop_no_improvement_penalty=float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
-        early_stop_min_improvement=float(reward_cfg.get("early_stop_min_improvement", 0.0)),
-    )
-
-
 def aggregate_metrics(rows: list[PolicyRow]) -> PolicyMetrics:
     keys = ["psnr_enhanced", "ssim_enhanced", "delta_psnr", "delta_ssim"]
     out: dict[str, float] = {}
@@ -122,9 +89,21 @@ def aggregate_metrics(rows: list[PolicyRow]) -> PolicyMetrics:
 def main() -> None:
     args = parse_args()
 
-    dataset_cfg = load_config("configs/dataset.yaml")
-    env_all = load_config("configs/environment.yaml")
-    train_all = load_config("configs/training.yaml")
+    checkpoint_root = Path(os.getenv("CHECKPOINT_ROOT", "checkpoints"))
+    local_checkpoint_root = PROJECT_ROOT / "checkpoints"
+    checkpoint_roots = [checkpoint_root]
+    if local_checkpoint_root != checkpoint_root:
+        checkpoint_roots.append(local_checkpoint_root)
+    logs_root = Path(os.getenv("LOGS_ROOT", "logs"))
+    checkpoint_path = resolve_checkpoint(args.checkpoint, checkpoint_roots)
+
+    dataset_root = os.getenv("DATASET_ROOT")
+    if dataset_root is None:
+        raise ValueError("DATASET_ROOT is not defined in .env")
+
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    run_id = checkpoint.get("run_id", checkpoint_path.parent.name)
+    dataset_cfg, env_all, train_all, run_log_dir = load_run_config_bundle(checkpoint_path, run_id)
 
     env_cfg = env_all.get("environment", {})
     reward_cfg = env_all.get("reward", {})
@@ -143,28 +122,24 @@ def main() -> None:
     max_steps = int(env_cfg.get("max_steps", 5))
     dataset_image_size = get_effective_image_size(dataset_core_cfg)
     image_size = (dataset_image_size, dataset_image_size)
-    reward_metric = "psnr" if bool(reward_cfg.get("use_psnr", True)) else "ssim"
+    use_psnr = bool(reward_cfg.get("use_psnr", True))
+    use_ssim = bool(reward_cfg.get("use_ssim", False))
+    if use_psnr and use_ssim:
+        reward_metric = "combined"
+    elif use_psnr:
+        reward_metric = "psnr"
+    elif use_ssim:
+        reward_metric = "ssim"
+    else:
+        raise ValueError("At least one of reward.use_psnr or reward.use_ssim must be enabled.")
+    action_set_name = str(env_cfg.get("action_set", "general"))
     seed = int(train_cfg.get("seed", 42))
     collapse_threshold = float(train_cfg.get("action_collapse_threshold", 0.70))
     min_stop_rate = float(train_cfg.get("min_stop_rate", 0.10))
     eval_subset_size_cfg = int(dataset_core_cfg.get("eval_subset_size", 0) or 0)
 
-    checkpoint_root = Path(os.getenv("CHECKPOINT_ROOT", "checkpoints"))
-    local_checkpoint_root = PROJECT_ROOT / "checkpoints"
-    checkpoint_roots = [checkpoint_root]
-    if local_checkpoint_root != checkpoint_root:
-        checkpoint_roots.append(local_checkpoint_root)
-    logs_root = Path(os.getenv("LOGS_ROOT", "logs"))
-    checkpoint_path = resolve_checkpoint(args.checkpoint, checkpoint_roots)
-
-    dataset_root = os.getenv("DATASET_ROOT")
-    if dataset_root is None:
-        raise ValueError("DATASET_ROOT is not defined in .env")
-
     dataset_name = get_dataset_name(dataset_core_cfg)
     dataset = load_train_dataset(dataset_core_cfg, dataset_root=dataset_root)
-
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     eval_indices = checkpoint.get("eval_indices")
     if not eval_indices:
         train_indices_auto, eval_indices_auto = build_train_eval_indices(
@@ -184,20 +159,32 @@ def main() -> None:
     if not eval_subset:
         raise RuntimeError("Empty eval subset: check eval indices and --num-images.")
 
-    sample_img, _ = dataset[eval_subset[0]]
+    sample_clean, sample_degraded = extract_clean_and_degraded_images(dataset[eval_subset[0]])
     sample_degradation_type = choose_degradation_type(
         default_type=default_degradation_type,
         candidate_types=candidate_degradation_types,
         key=eval_subset[0] + seed + 1234,
     )
     sample_env = build_env_for_image(
-        sample_img.convert("RGB"),
+        sample_clean,
         max_steps,
         image_size,
         reward_metric,
-        reward_cfg,
+        float(reward_cfg.get("step_penalty", 0.01)),
+        float(reward_cfg.get("repeated_action_penalty", 0.0)),
+        float(reward_cfg.get("no_improvement_penalty", 0.0)),
+        float(reward_cfg.get("stop_bonus_scale", 0.0)),
+        float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
+        float(reward_cfg.get("early_stop_min_improvement", 0.0)),
+        float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
+        float(reward_cfg.get("stop_action_bonus", 0.0)),
+        float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
+        float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
+        bool(env_cfg.get("include_step_channel", True)),
+        action_set_name,
         sample_degradation_type,
         noise_std,
+        degraded_image=sample_degraded,
     )
 
     use_dueling_dqn = bool(checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint)))
@@ -219,8 +206,7 @@ def main() -> None:
     per_policy_rows: dict[str, list[PolicyRow]] = defaultdict(list)
 
     for offset, idx in enumerate(eval_subset):
-        clean_image, _ = dataset[idx]
-        clean_image = clean_image.convert("RGB")
+        clean_image, degraded_image = extract_clean_and_degraded_images(dataset[idx])
         degradation_type = choose_degradation_type(
             default_type=default_degradation_type,
             candidate_types=candidate_degradation_types,
@@ -232,9 +218,21 @@ def main() -> None:
             max_steps,
             image_size,
             reward_metric,
-            reward_cfg,
+            float(reward_cfg.get("step_penalty", 0.01)),
+            float(reward_cfg.get("repeated_action_penalty", 0.0)),
+            float(reward_cfg.get("no_improvement_penalty", 0.0)),
+            float(reward_cfg.get("stop_bonus_scale", 0.0)),
+            float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
+            float(reward_cfg.get("early_stop_min_improvement", 0.0)),
+            float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
+            float(reward_cfg.get("stop_action_bonus", 0.0)),
+            float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
+            float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
+            bool(env_cfg.get("include_step_channel", True)),
+            action_set_name,
             degradation_type,
             noise_std,
+            degraded_image=degraded_image,
         )
         state, _ = env.reset(seed=seed + 30000 + offset)
         clean_eval = env.clean_image
@@ -304,7 +302,7 @@ def main() -> None:
         "action_analysis_available": False,
     }
 
-    action_analysis_file = logs_root / "dqn" / checkpoint.get("run_id", checkpoint_path.parent.name) / args.action_analysis_file
+    action_analysis_file = run_log_dir / args.action_analysis_file
     stop_rate = None
     dominant_action_share = None
     avg_episode_length = None
@@ -352,8 +350,7 @@ def main() -> None:
         print(f"  {name:35s}: {value}")
     print(f"  {'acceptance_passed':35s}: {acceptance_passed}")
 
-    run_id = checkpoint.get("run_id", checkpoint_path.parent.name)
-    out_dir = logs_root / "dqn" / run_id
+    out_dir = run_log_dir
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / args.output_name
 

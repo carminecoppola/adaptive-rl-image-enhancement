@@ -1,93 +1,89 @@
 # Current State
 
-Data di riferimento: `2026-05-07`
+Data di riferimento: `2026-05-08`
 
 Questo file è il riferimento canonico del branch per capire da dove ripartire.
 
 ## Dove siamo
 
-- La pipeline RL end-to-end è disponibile:
-  - training: `src/training/train.py`
-  - analisi azioni: `src/evaluation/analyze_dqn_actions.py`
-  - evaluation baseline/gate: `src/evaluation/evaluation_dqn_baselines.py`
+- Il branch è `underwater-first`.
+- La pipeline canonica è ora basata su:
+  - `src/training/train.py`
+  - `src/evaluation/analyze_dqn_actions.py`
+  - `src/evaluation/evaluation_dqn_baselines.py`
+  - `src/evaluation/evaluate_underwater_ood.py`
+  - `src/evaluation/generate_underwater_report.py`
 - Gli artifact di run vengono prodotti sotto `${LOGS_ROOT}/dqn/<RUN_ID>/`.
-- La selezione checkpoint è PSNR-first:
+- La selezione checkpoint è PSNR-first su subset fisso:
   - metrica primaria: `mean_delta_psnr`
   - tie-break: `mean_eval_reward`
-- La riproducibilità è stata migliorata con split deterministico, eval subset salvato e `effective_config.json`.
+- Le run paired UIEB usano ora davvero:
+  - dataset paired degradato + reference
+  - action set `underwater_curated_v1`
+  - override di fase `smoke_test` / `full_training`
 
-## Fix già consolidati
+## Consolidamenti già applicati
 
-- Gate di accettazione rigido in evaluation.
-- Allineamento fra training ed evaluation su degradazione e observation channels.
-- Gestione image-size guidata dalla config dataset.
-- Config `configs/dataset_stl10_safe.yaml` aggiunta e validata come smoke test.
+- Cleanup soft del repository con archivio dei documenti/script/config legacy.
+- Unificazione del naming storage su `CHECKPOINT_ROOT`.
+- Evaluation e action analysis allineate alla `effective_config.json` della run.
+- Tracking subset fisso durante il training per la scelta del best checkpoint.
+- Supporto reale agli action set `underwater_v1` e `underwater_curated_v1` nell’environment.
+- Riduzione dell’action space canonico a una variante curated che mantiene le trasformazioni più utili su UIEB.
+- Gestione paired UIEB corretta: input degradato e target di riferimento non vengono più confusi.
 
 ## Gate di accettazione attuale
 
-Una run è considerata valida solo se passa tutti questi controlli:
+Una run underwater viene considerata valida solo se produce:
 
-- `dominant_action_share <= threshold`
-- `stop_rate >= min_stop_rate`
+- `effective_config.json`
+- `dataset_split.json`
+- `eval_summary.json`
+- `action_analysis*.json`
+- `evaluation_baselines*.json`
+- checkpoint `best` e `final`
+
+e se passa i controlli di evaluation:
+
 - `mean_delta_psnr > 0`
 - `output_psnr >= input_psnr`
-- `action_analysis.json` presente
+- `dominant_action_share <= threshold`
+- `stop_rate >= min_stop_rate`
+- `action_analysis` disponibile
 
-L’esito finale viene scritto in `evaluation_baselines.json` con `acceptance_checks` e `acceptance_passed`.
+## Stato risultati
 
-## Ultimo punto verificato
+- Le vecchie run underwater esistono come riferimento storico, ma non vanno considerate consolidate per il nuovo workflow.
+- La ragione è metodologica:
+  - subset di selezione best non fisso nelle run precedenti
+  - phase override non applicate correttamente
+  - evaluation underwater non allineata alla config effettiva della run
+  - integrazione paired UIEB e action set underwater corretta solo dopo questo consolidamento
+  - action space precedente troppo ampio e popolato da operatori sistematicamente peggiorativi per il target PSNR-first
 
-Batch Phase 3A con tuning reward e `use_double_dqn=true`:
+## Prossima verifica ufficiale
 
-- `dqn_phase3a_control_20260506_122118`
-- `dqn_phase3a_treatment_20260506_123200`
-- `dqn_phase3a_treatment2_20260506_124100`
+La prossima run da considerare ufficiale dovrà essere prodotta da:
 
-Trend osservato:
+```bash
+sbatch scripts/train_underwater.sbatch
+```
 
-- `stop_rate`: `0.024 -> 0.041 -> 0.055`
-- `mean_delta_psnr`: `-1.512 -> -0.990 -> +0.703`
+e dovrà completare:
 
-Interpretazione:
-
-- Il tuning reward sta andando nella direzione giusta.
-- L’ultima run è quality-positive e leggibile.
-- La run non passa ancora il gate completo per `stop_rate` troppo basso rispetto alla soglia `0.10`.
-
-## Evidenza OOD
-
-Sulla run `dqn_phase3a_treatment2_20260506_124100`:
-
-- ID: `mean_delta_psnr = +0.7033`
-- ID: `stop_rate = 0.0546`
-- OOD con rumore più forte: `mean_delta_psnr = -1.9320`
-
-Conclusione:
-
-- Il comportamento in-distribution è promettente.
-- La generalizzazione fuori distribuzione non è ancora robusta.
-
-## Prossime fasi
-
-1. Phase A: short sanity runs con la configurazione aggiornata.
-2. Phase B: medium stability runs per verificare robustezza del comportamento.
-3. Phase C: long final runs.
-4. Selezione del modello finale solo tra le run che passano l’intero gate.
-
-## Priorità tecnica
-
-- Migliorare il comportamento di `STOP`.
-- Continuare il reward tuning senza allentare il gate.
-- Misurare meglio stabilità tra run.
-- Eseguire validazione OOD controllata.
+1. smoke training
+2. smoke evaluation minima
+3. full training
+4. baseline evaluation su best checkpoint
+5. baseline evaluation su final checkpoint
+6. OOD evaluation su `challenging-60`
+7. report canonico della run
 
 ## File da considerare ufficiali
 
 - `README.md`
 - `docs/CURRENT_STATE.md`
-- `scripts/train.sh`
-- `scripts/train.sbatch`
-- `scripts/evaluate.sh`
-- `configs/experiments/phase_a_sanity.yaml`
-- `configs/experiments/phase_b_stability.yaml`
-- `configs/experiments/phase_c_final.yaml`
+- `scripts/TRAINING_GUIDE.md`
+- `scripts/train_underwater.sbatch`
+- `configs/experiments/underwater_dqn_v1.yaml`
+- `notebooks/underwater_policy_analysis.ipynb`
