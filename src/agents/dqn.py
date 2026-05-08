@@ -46,8 +46,8 @@ class DQN(nn.Module):
 
     def forward(self, x):
         x = x / 255.0 if x.max() > 1.0 else x
-        # Keep legacy checkpoint compatibility: existing conv stack was designed
-        # around 128x128 inputs, so smaller observations are upsampled on-the-fly.
+        # The conv stack expects larger spatial support, so smaller inputs are
+        # upsampled on-the-fly before feature extraction.
         if x.shape[-2] < 128 or x.shape[-1] < 128:
             x = F.interpolate(x, size=(128, 128), mode="bilinear", align_corners=False)
         x = self.features(x)

@@ -1,0 +1,62 @@
+dataset:
+  name: "STL10"
+  image_size: 96
+  split: "train"
+  download: true
+  train_subset_size: 5000
+  eval_subset_size: 500
+
+degradation:
+  type: "mixed"
+  candidate_types:
+    - "gaussian_noise"
+    - "low_brightness"
+    - "low_contrast"
+    - "blur"
+    - "combined"
+  noise_std: 0.1
+  brightness_factor: 0.6
+  contrast_factor: 0.6
+  blur_radius: 1.0
+
+environment:
+  max_steps: 5
+  include_step_channel: true
+
+reward:
+  use_psnr: true
+  use_ssim: false
+  step_penalty: 0.011
+  repeated_action_penalty: 0.05
+  no_improvement_penalty: 0.03
+  stop_bonus_scale: 0.3
+  stop_no_improvement_penalty: 0.04
+  early_stop_min_improvement: 0.01
+  truncate_without_stop_penalty: 0.75
+  stop_action_bonus: 0.04
+  terminal_reward_psnr_scale: 1.5
+  terminal_reward_ssim_scale: 0.0
+
+training:
+  algorithm: DDQN
+  seed: 42
+  num_episodes: 400
+  learning_rate: 0.0001
+  batch_size: 64
+  gamma: 0.99
+  use_double_dqn: true
+  use_dueling_dqn: false
+  buffer_size: 50000
+  target_update_every: 5
+  eval_every: 10
+  num_eval_episodes: 20
+  epsilon_start: 1.0
+  epsilon_end: 0.08
+  epsilon_decay: 0.9985
+  eval_pool_size: 500
+  action_collapse_threshold: 0.7
+  min_stop_rate: 0.1
+
+metadata:
+  name: "phase_c_final"
+  description: "Long final runs on STL10 safe configuration."

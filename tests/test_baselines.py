@@ -34,7 +34,7 @@ def degraded_image() -> Image.Image:
     array = np.ones((64, 64, 3), dtype=np.uint8)
     array[:, :, 0] = 80   # Red: low
     array[:, :, 1] = 100  # Green: low
-    array[:, :, 2] = 150  # Blue: high (underwater blue cast)
+    array[:, :, 2] = 150  # Blue-heavy tint
     return Image.fromarray(array, mode="RGB")
 
 

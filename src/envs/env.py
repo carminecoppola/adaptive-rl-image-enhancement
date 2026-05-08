@@ -11,7 +11,6 @@ from PIL import Image
 
 from src.actions.filters import ImageAction, apply_action, get_action_name
 from src.metrics import compute_psnr, compute_ssim
-from src.metrics.color_cast import compute_color_cast_score
 
 
 class ImageEnhancementEnv(gym.Env):
@@ -39,8 +38,6 @@ class ImageEnhancementEnv(gym.Env):
         stop_action_bonus: float = 0.0,
         terminal_reward_psnr_scale: float = 0.0,
         terminal_reward_ssim_scale: float = 0.0,
-        color_cast_weight: float = 0.0,
-        color_cast_improvement_scale: float = 0.5,
         include_step_channel: bool = True,
     ) -> None:
         super().__init__()
@@ -71,8 +68,6 @@ class ImageEnhancementEnv(gym.Env):
         self.stop_action_bonus = stop_action_bonus
         self.terminal_reward_psnr_scale = terminal_reward_psnr_scale
         self.terminal_reward_ssim_scale = terminal_reward_ssim_scale
-        self.color_cast_weight = color_cast_weight
-        self.color_cast_improvement_scale = color_cast_improvement_scale
         self.include_step_channel = include_step_channel
 
         self.num_actions = len(ImageAction)
@@ -108,8 +103,6 @@ class ImageEnhancementEnv(gym.Env):
         self.current_step = 0
         self.previous_quality = self._compute_quality(self.current_image)
         self.initial_quality = self.previous_quality
-        self.initial_color_cast = compute_color_cast_score(self.current_image) if self.color_cast_weight > 0 else 0.0
-        self.previous_color_cast = self.initial_color_cast
         self.previous_action = None
 
         observation = self._image_to_observation(self.current_image)
@@ -154,7 +147,6 @@ class ImageEnhancementEnv(gym.Env):
         stop_action_bonus_applied = 0.0
         terminal_psnr_reward_applied = 0.0
         terminal_ssim_reward_applied = 0.0
-        color_cast_reward_applied = 0.0
 
         if not terminated and self.previous_action is not None and action == self.previous_action:
             repeated_penalty_applied = self.repeated_action_penalty
@@ -178,12 +170,6 @@ class ImageEnhancementEnv(gym.Env):
                 ssim_initial = compute_ssim(self.initial_degraded_image, self.clean_image)
                 terminal_ssim_reward_applied = self.terminal_reward_ssim_scale * (ssim_now - ssim_initial)
 
-        if self.color_cast_weight > 0.0:
-            current_color_cast = compute_color_cast_score(self.current_image)
-            delta_color_cast = self.previous_color_cast - current_color_cast  # Negative is good (lower cast)
-            color_cast_reward_applied = self.color_cast_weight * self.color_cast_improvement_scale * delta_color_cast
-            self.previous_color_cast = current_color_cast
-
         reward = (
             delta_quality
             - step_penalty_applied
@@ -193,7 +179,6 @@ class ImageEnhancementEnv(gym.Env):
             + stop_action_bonus_applied
             + terminal_psnr_reward_applied
             + terminal_ssim_reward_applied
-            + color_cast_reward_applied
             - stop_no_improvement_penalty_applied
         )
 
@@ -222,14 +207,12 @@ class ImageEnhancementEnv(gym.Env):
             "stop_action_bonus_applied": float(stop_action_bonus_applied),
             "terminal_psnr_reward_applied": float(terminal_psnr_reward_applied),
             "terminal_ssim_reward_applied": float(terminal_ssim_reward_applied),
-            "color_cast_reward_applied": float(color_cast_reward_applied),
             "stop_no_improvement_penalty_applied": float(stop_no_improvement_penalty_applied),
             "truncate_without_stop_penalty_applied": float(truncate_without_stop_penalty_applied),
             "early_stop_min_improvement": float(self.early_stop_min_improvement),
             "reward": float(reward),
             "psnr": compute_psnr(self.current_image, self.clean_image),
             "ssim": compute_ssim(self.current_image, self.clean_image),
-            "color_cast_score": compute_color_cast_score(self.current_image) if self.color_cast_weight > 0 else 0.0,
             "terminated": terminated,
             "truncated": truncated,
         }

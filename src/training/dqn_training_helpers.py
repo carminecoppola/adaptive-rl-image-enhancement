@@ -65,8 +65,6 @@ def build_env_for_image(
     stop_action_bonus: float,
     terminal_reward_psnr_scale: float,
     terminal_reward_ssim_scale: float,
-    color_cast_weight: float,
-    color_cast_improvement_scale: float,
     include_step_channel: bool,
     degradation_type: str,
     noise_std: float,
@@ -76,10 +74,8 @@ def build_env_for_image(
     Build environment for a single image.
     
     Args:
-        clean_image: Reference high-quality image (reward ground truth)
-        degraded_image: Pre-degraded image to start from (optional).
-                       If None, will apply degradation_type to clean_image.
-                       Use this for UIEB where images already have real degradation.
+        clean_image: Reference high-quality image.
+        degraded_image: Optional precomputed degraded image.
     """
     if degraded_image is None:
         degraded_image = degrade_image(
@@ -103,8 +99,6 @@ def build_env_for_image(
         stop_action_bonus=stop_action_bonus,
         terminal_reward_psnr_scale=terminal_reward_psnr_scale,
         terminal_reward_ssim_scale=terminal_reward_ssim_scale,
-        color_cast_weight=color_cast_weight,
-        color_cast_improvement_scale=color_cast_improvement_scale,
         include_step_channel=include_step_channel,
     )
 
@@ -127,8 +121,6 @@ def evaluate_on_indices(
     stop_action_bonus: float,
     terminal_reward_psnr_scale: float,
     terminal_reward_ssim_scale: float,
-    color_cast_weight: float,
-    color_cast_improvement_scale: float,
     include_step_channel: bool,
     default_degradation_type: str,
     candidate_degradation_types: list[str],
@@ -166,8 +158,6 @@ def evaluate_on_indices(
             stop_action_bonus=stop_action_bonus,
             terminal_reward_psnr_scale=terminal_reward_psnr_scale,
             terminal_reward_ssim_scale=terminal_reward_ssim_scale,
-            color_cast_weight=color_cast_weight,
-            color_cast_improvement_scale=color_cast_improvement_scale,
             include_step_channel=include_step_channel,
             degradation_type=degradation_type,
             noise_std=noise_std,

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Activate virtual environment.
+EXPERIMENT="${1:-}"
+
 source venv/bin/activate
 
-# Load environment variables.
 if [ -f .env ]; then
   set -a
   source .env
@@ -14,5 +14,8 @@ else
   exit 1
 fi
 
-# Placeholder training invocation.
-python -m src.training.train_dqn
+if [ -n "$EXPERIMENT" ]; then
+  python src/training/train.py --experiment "$EXPERIMENT"
+else
+  python src/training/train.py
+fi

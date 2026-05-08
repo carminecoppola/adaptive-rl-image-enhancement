@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=adaptive_dqn_debug
-#SBATCH --output=/storage/internal_02/ccoppola/adaptive_rl_image_enhancement/logs/slurm/%x_%j.out
-#SBATCH --error=/storage/internal_02/ccoppola/adaptive_rl_image_enhancement/logs/slurm/%x_%j.err
-#SBATCH --time=00:30:00
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
+#SBATCH --job-name=adaptive_dqn
+#SBATCH --output=slurm-%x_%j.out
+#SBATCH --error=slurm-%x_%j.err
+#SBATCH --time=04:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
 
 set -euo pipefail
 
 PROJECT_ROOT="/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement"
 cd "$PROJECT_ROOT"
+
+EXPERIMENT="${1:-${EXPERIMENT:-}}"
+if [ -z "$EXPERIMENT" ]; then
+  echo "Usage: sbatch scripts/train.sbatch <experiment_name>"
+  echo "or:    sbatch --export=ALL,EXPERIMENT=phase_a_sanity scripts/train.sbatch"
+  exit 1
+fi
 
 if [ ! -d "venv" ]; then
   echo "venv not found. Run scripts/setup_env.sh first."
@@ -27,11 +34,11 @@ else
   exit 1
 fi
 
-mkdir -p "${LOGS_ROOT}/slurm" "${LOGS_ROOT}/dqn" "${CHECKPOINT_ROOT}"
+if [ ! -f "configs/experiments/${EXPERIMENT}.yaml" ]; then
+  echo "Experiment config not found: configs/experiments/${EXPERIMENT}.yaml"
+  exit 1
+fi
 
-# Diagnostic logging for reward analysis.
-export DQN_DEBUG_REWARD=1
-export DQN_DEBUG_EPISODES=10
-export RUN_ID="dqn_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "${LOGS_ROOT}/dqn" "${CHECKPOINT_ROOT}"
 
-python3 src/training/train_dqn.py
+python3 src/training/train.py --experiment "$EXPERIMENT"

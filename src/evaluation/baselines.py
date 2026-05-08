@@ -122,17 +122,16 @@ def histogram_equalization_baseline(image: Image.Image) -> Image.Image:
 
 def dark_channel_prior_baseline(image: Image.Image, window_size: int = 15) -> Image.Image:
     """
-    Dark Channel Prior (DCP) for underwater image enhancement.
+    Dark Channel Prior (DCP) baseline for generic dehazing/contrast recovery.
     
-    Based on: "Single Image Haze Removal via Composition Model" (He et al., 2009)
-    and applied to underwater restoration.
+    Based on the dark-channel prior literature for haze removal.
     
     The dark channel represents the minimum intensity in local patches.
-    In hazy/underwater images, the dark channel is bright (caused by airlight/backscatter).
+    In hazy images, the dark channel is bright because of airlight.
     By estimating and removing the airlight, we restore contrast.
     
     Args:
-        image: Input underwater image
+        image: Input degraded image
         window_size: Size of local patches for dark channel computation
         
     Returns:

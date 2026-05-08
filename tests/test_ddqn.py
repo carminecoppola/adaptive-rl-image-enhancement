@@ -9,6 +9,10 @@ from src.agents.dqn_agent import DQNAgent
 from src.agents.replay_buffer import ReplayBuffer
 
 
+def make_state() -> torch.Tensor:
+    return torch.randn(32, 32, 3)
+
+
 def test_ddqn_agent_initialization():
     """Test that DQNAgent initializes with DDQN enabled by default."""
     agent = DQNAgent(num_actions=9, batch_size=32)
@@ -27,10 +31,10 @@ def test_ddqn_optimize_model_with_buffer():
     buffer = ReplayBuffer(capacity=1000)
     
     # Populate buffer with sample transitions
-    state = torch.randn(3, 32, 32)
+    state = make_state()
     action = 0
     reward = 1.0
-    next_state = torch.randn(3, 32, 32)
+    next_state = make_state()
     done = False
     
     # Fill buffer with at least batch_size transitions
@@ -53,10 +57,10 @@ def test_ddqn_vs_dqn_both_work():
     
     # Populate buffer with diverse transitions
     for i in range(64):
-        state = torch.randn(3, 32, 32)
+        state = make_state()
         action = i % 9  # cycle through actions
         reward = float(i % 3)  # vary rewards
-        next_state = torch.randn(3, 32, 32)
+        next_state = make_state()
         done = (i % 10 == 9)  # random done flags
         buffer.push(state, action, reward, next_state, done)
     
@@ -77,10 +81,10 @@ def test_ddqn_gradient_clipping():
     
     # Create transitions with extreme rewards to stress test gradient clipping
     for _ in range(32):
-        state = torch.randn(3, 32, 32)
+        state = make_state()
         action = 0
         reward = 100.0  # Large reward
-        next_state = torch.randn(3, 32, 32)
+        next_state = make_state()
         done = False
         buffer.push(state, action, reward, next_state, done)
     
@@ -97,7 +101,7 @@ def test_ddqn_gradient_clipping():
 def test_action_selection():
     """Test that action selection returns valid actions."""
     agent = DQNAgent(num_actions=9, use_double_dqn=True, device="cpu", epsilon=0.0)
-    state = torch.randn(3, 32, 32).numpy()
+    state = make_state().numpy()
     
     for _ in range(5):
         action = agent.select_action(state)
@@ -109,7 +113,7 @@ def test_epsilon_greedy_exploration():
     """Test that epsilon-greedy exploration works correctly."""
     # With epsilon=1.0, all actions should be random
     agent_explore = DQNAgent(num_actions=9, use_double_dqn=True, device="cpu", epsilon=1.0)
-    state = torch.randn(3, 32, 32).numpy()
+    state = make_state().numpy()
     
     actions = [agent_explore.select_action(state) for _ in range(20)]
     # With high epsilon, we should see some variety in actions
@@ -124,17 +128,11 @@ def test_epsilon_greedy_exploration():
 def test_target_network_update():
     """Test that target network can be updated correctly."""
     agent = DQNAgent(num_actions=9, use_double_dqn=True, device="cpu")
-    
-    # Store initial target net parameters
-    initial_params = [p.clone() for p in agent.target_net.parameters()]
-    
-    # Modify policy_net (simulate training)
+
     for param in agent.policy_net.parameters():
         param.data.add_(torch.randn_like(param.data) * 0.01)
-    
-    # Update target net
+
     agent.update_target_network()
-    
-    # Target net should now match policy_net
-    for i, param in enumerate(agent.target_net.parameters()):
-        assert torch.allclose(param, agent.policy_net.parameters().__next__() if i == 0 else param, atol=1e-6)
+
+    for target_param, policy_param in zip(agent.target_net.parameters(), agent.policy_net.parameters()):
+        assert torch.allclose(target_param, policy_param, atol=1e-6)

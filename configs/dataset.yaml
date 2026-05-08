@@ -1,28 +1,19 @@
 dataset:
-  # Supported datasets: "CIFAR10", "STL10", "UIEB"
-  # - CIFAR10: 32x32 synthetic images (default, fast debug)
-  # - STL10: 96x96 cleaner images (visual-safe)
-  # - UIEB: real 890 underwater image pairs (production)
+  # Supported datasets: "CIFAR10", "STL10"
   name: "CIFAR10"
-  # If omitted, defaults are selected by dataset:
-  # CIFAR10 -> 32, STL10 -> 96, UIEB -> 128
   image_size: 32
-  # For STL10 valid splits: train, train+unlabeled, unlabeled, test
-  # For UIEB valid splits: train, val, test (auto-split by seed)
   split: "train"
   train_split: true
   download: true
 
 degradation:
-  # Degradation types:
-  # - "mixed": randomly sample from candidate_types (default)
-  # - "gaussian_noise": additive Gaussian noise
-  # - "low_brightness": darken image
-  # - "low_contrast": reduce contrast
-  # - "blur": Gaussian blur
-  # - "combined": combines multiple degradations
-  # - "underwater": physics-based underwater degradation (Task 6)
-  # - "none": no degradation (use with UIEB which has real degradation)
+  # Supported degradations:
+  # - mixed
+  # - gaussian_noise
+  # - low_brightness
+  # - low_contrast
+  # - blur
+  # - combined
   type: "mixed"
   candidate_types:
     - "gaussian_noise"
@@ -30,12 +21,7 @@ degradation:
     - "low_contrast"
     - "blur"
     - "combined"
-  # Underwater degradation parameters
-  underwater:
-    depth: 5.0          # Simulated water depth (0-10)
-    turbidity: 0.5      # Water turbidity factor (0-1)
-    - "blur"
-    - "combined"
   noise_std: 0.1
-  low_contrast: false
-  low_brightness: false
+  brightness_factor: 0.6
+  contrast_factor: 0.6
+  blur_radius: 1.0

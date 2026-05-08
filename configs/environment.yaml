@@ -2,21 +2,15 @@ environment:
   max_steps: 5
   include_step_channel: true
   action_space:
-  # Standard image enhancement actions (0-8)
-  - increase_brightness      # 0
-  - decrease_brightness      # 1
-  - increase_contrast        # 2
-  - decrease_contrast        # 3
-  - gaussian_denoise         # 4
-  - sharpen                  # 5
-  - gamma_up                 # 6
-  - gamma_down               # 7
-  - stop                     # 8
-  # Underwater-specific actions (9-12)
-  - red_channel_boost        # 9 — compensate for red absorption
-  - lab_color_balance        # 10 — white balance in LAB space
-  - clahe                    # 11 — contrast-limited adaptive histogram eq.
-  - saturation_boost         # 12 — restore desaturated colors
+    - increase_brightness
+    - decrease_brightness
+    - increase_contrast
+    - decrease_contrast
+    - gaussian_denoise
+    - sharpen
+    - gamma_up
+    - gamma_down
+    - stop
 reward:
   use_psnr: true
   use_ssim: false
@@ -30,6 +24,3 @@ reward:
   stop_action_bonus: 0.04
   terminal_reward_psnr_scale: 1.5
   terminal_reward_ssim_scale: 0.0
-  # Color cast reward (underwater domain)
-  color_cast_weight: 0.15
-  color_cast_improvement_scale: 0.5

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Activate virtual environment.
+CHECKPOINT="${1:-}"
+
 source venv/bin/activate
 
-# Load environment variables.
 if [ -f .env ]; then
   set -a
   source .env
@@ -14,5 +14,8 @@ else
   exit 1
 fi
 
-# Placeholder evaluation invocation.
-python -m src.evaluation.evaluate_agent
+if [ -n "$CHECKPOINT" ]; then
+  python src/evaluation/evaluation_dqn_baselines.py --checkpoint "$CHECKPOINT"
+else
+  python src/evaluation/evaluation_dqn_baselines.py
+fi
