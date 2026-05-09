@@ -10,16 +10,17 @@ def make_env() -> ImageEnhancementEnv:
     return ImageEnhancementEnv(
         clean_image=clean_image,
         degraded_image=degraded_image,
-        max_steps=5,
+        max_steps=3,
         image_size=(32, 32),
         include_step_channel=True,
+        action_set_name="underwater_curated_v1",
     )
 
 
 def test_env_initialization() -> None:
     env = make_env()
-    assert env.max_steps == 5
-    assert env.action_space.n == 9
+    assert env.max_steps == 3
+    assert env.action_space.n == 4
 
 
 def test_reset_returns_observation_and_info() -> None:
@@ -39,7 +40,7 @@ def test_step_returns_valid_transition() -> None:
     assert isinstance(reward, float)
     assert isinstance(terminated, bool)
     assert isinstance(truncated, bool)
-    assert info["action_name"] == "increase_brightness"
+    assert info["action_name"] == "white_balance"
 
 
 def test_stop_action_terminates() -> None:

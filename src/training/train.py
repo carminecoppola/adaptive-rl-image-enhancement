@@ -58,76 +58,68 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
 
 def train() -> None:
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Train DDQN agent for image enhancement")
+    parser = argparse.ArgumentParser(description="Train the canonical DDQN agent for underwater image enhancement.")
     parser.add_argument(
         "--experiment",
         type=str,
-        default=None,
-        help="Experiment name (e.g., 'phase_a_sanity'). "
-             "If provided, loads from configs/experiments/{experiment}.yaml and merges with base configs.",
+        default="underwater_dqn_v1",
+        help="Canonical experiment name. Only 'underwater_dqn_v1' is supported.",
     )
     parser.add_argument(
         "--phase",
         type=str,
-        default=None,
-        help="Optional phase override inside the experiment config (for example: smoke_test, full_training).",
+        default="full_training",
+        help="Optional phase override inside the experiment config. Only 'full_training' is supported.",
     )
     args = parser.parse_args()
-    
-    # Load base configurations
-    dataset_config = load_config("configs/dataset.yaml")
-    env_config_all = load_config("configs/environment.yaml")
-    training_config_all = load_config("configs/training.yaml")
-    
-    # If experiment is specified, load and merge experiment config
-    if args.experiment:
-        experiment_path = Path("configs/experiments") / f"{args.experiment}.yaml"
-        if not experiment_path.exists():
-            raise FileNotFoundError(f"Experiment config not found: {experiment_path}")
-        
-        experiment_config = load_config(str(experiment_path))
-        
-        # Merge experiment config into base configs (experiment overrides base)
-        # IMPORTANT: Preserve nested structure by wrapping dataset config
+
+    if args.experiment != "underwater_dqn_v1":
+        raise ValueError(
+            "This repository now supports only the canonical underwater experiment "
+            "'underwater_dqn_v1'."
+        )
+
+    experiment_path = Path("configs/experiments") / f"{args.experiment}.yaml"
+    if not experiment_path.exists():
+        raise FileNotFoundError(f"Experiment config not found: {experiment_path}")
+
+    experiment_config = load_config(str(experiment_path))
+    dataset_config = {
+        "dataset": experiment_config.get("dataset", {}),
+        "degradation": experiment_config.get("degradation", {}),
+    }
+    env_config_all = experiment_config.copy()
+    training_config_all = experiment_config.copy()
+
+    print(f"[EXPERIMENT] Loaded experiment config: {args.experiment}")
+    print(f"[EXPERIMENT] Config file: {experiment_path}")
+    if "metadata" in experiment_config:
+        metadata = experiment_config["metadata"]
+        print(f"[EXPERIMENT] Name: {metadata.get('name', 'N/A')}")
+        print(f"[EXPERIMENT] Description: {metadata.get('description', 'N/A')}")
+
+    if args.phase:
+        if args.phase != "full_training":
+            raise ValueError(
+                "This repository now supports only the 'full_training' phase for the "
+                "canonical underwater workflow."
+            )
+        phase_override = experiment_config.get(args.phase)
+        if not isinstance(phase_override, dict):
+            raise KeyError(
+                f"Phase override '{args.phase}' not found in {experiment_path}."
+            )
+
         dataset_config = deep_merge_dicts(
             dataset_config,
             {
-                "dataset": experiment_config.get("dataset", {}),
-                "degradation": experiment_config.get("degradation", {}),
+                "dataset": phase_override.get("dataset", {}),
+                "degradation": phase_override.get("degradation", {}),
             },
         )
-        env_config_all = deep_merge_dicts(env_config_all, experiment_config)
-        training_config_all = deep_merge_dicts(training_config_all, experiment_config)
-        
-        print(f"[EXPERIMENT] Loaded experiment config: {args.experiment}")
-        print(f"[EXPERIMENT] Config file: {experiment_path}")
-        if "metadata" in experiment_config:
-            metadata = experiment_config["metadata"]
-            print(f"[EXPERIMENT] Name: {metadata.get('name', 'N/A')}")
-            print(f"[EXPERIMENT] Description: {metadata.get('description', 'N/A')}")
-
-        if args.phase:
-            phase_override = experiment_config.get(args.phase)
-            if not isinstance(phase_override, dict):
-                available_phases = sorted(
-                    key for key, value in experiment_config.items()
-                    if isinstance(value, dict) and ("training" in value or "dataset" in value or "evaluation" in value)
-                )
-                raise KeyError(
-                    f"Phase override '{args.phase}' not found in {experiment_path}. "
-                    f"Available structured phases: {available_phases}"
-                )
-
-            dataset_config = deep_merge_dicts(
-                dataset_config,
-                {
-                    "dataset": phase_override.get("dataset", {}),
-                    "degradation": phase_override.get("degradation", {}),
-                },
-            )
-            env_config_all = deep_merge_dicts(env_config_all, phase_override)
-            training_config_all = deep_merge_dicts(training_config_all, phase_override)
-            print(f"[EXPERIMENT] Applied phase override: {args.phase}")
+        env_config_all = deep_merge_dicts(env_config_all, phase_override)
+        training_config_all = deep_merge_dicts(training_config_all, phase_override)
+        print(f"[EXPERIMENT] Applied phase override: {args.phase}")
 
     env_config = env_config_all.get("environment", {})
     reward_config = env_config_all.get("reward", {})

@@ -35,23 +35,25 @@ def load_run_config_bundle(checkpoint_path: Path, run_id: str) -> tuple[dict[str
 
     Preference order:
     1. effective_config.json stored with the run
-    2. current repository base configs
+    2. current canonical underwater experiment config
     """
     run_log_dir = resolve_run_log_dir(checkpoint_path, run_id)
     effective_config_path = run_log_dir / "effective_config.json"
     if effective_config_path.exists():
         with open(effective_config_path, "r") as f:
             payload = json.load(f)
+        canonical = load_config("configs/experiments/underwater_dqn_v1.yaml")
         return (
-            payload.get("dataset", load_config("configs/dataset.yaml")),
-            payload.get("environment", load_config("configs/environment.yaml")),
-            payload.get("training", load_config("configs/training.yaml")),
+            payload.get("dataset", {"dataset": canonical.get("dataset", {}), "degradation": canonical.get("degradation", {})}),
+            payload.get("environment", canonical),
+            payload.get("training", canonical),
             run_log_dir,
         )
 
+    canonical = load_config("configs/experiments/underwater_dqn_v1.yaml")
     return (
-        load_config("configs/dataset.yaml"),
-        load_config("configs/environment.yaml"),
-        load_config("configs/training.yaml"),
+        {"dataset": canonical.get("dataset", {}), "degradation": canonical.get("degradation", {})},
+        canonical,
+        canonical,
         run_log_dir,
     )
