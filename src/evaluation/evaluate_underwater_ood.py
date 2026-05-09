@@ -81,8 +81,10 @@ def main() -> None:
     reward_cfg = env_all.get("reward", {})
     train_cfg = train_all.get("training", {})
     action_set_name = str(env_cfg.get("action_set", "general"))
-    if action_set_name != "underwater_v1":
-        raise ValueError(f"OOD challenging-60 evaluation requires underwater_v1 action set, got: {action_set_name}")
+    if not action_set_name.startswith("underwater"):
+        raise ValueError(
+            f"OOD challenging-60 evaluation requires an underwater action set, got: {action_set_name}"
+        )
 
     dataset_root = os.getenv("DATASET_ROOT")
     if dataset_root is None:

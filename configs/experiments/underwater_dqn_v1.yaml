@@ -102,20 +102,6 @@ storage:
   logs_root: "${LOGS_ROOT}"
   checkpoint_dir: "${CHECKPOINT_ROOT}/dqn"
 
-smoke_test:
-  training:
-    num_episodes: 100
-    num_eval_episodes: 20
-    eval_every: 5
-  dataset:
-    train_subset_size: 192
-    eval_subset_size: 48
-    val_subset_size: 48
-  evaluation:
-    subset_size: 20
-    gate:
-      min_stop_rate: 0.01
-
 full_training:
   training:
     num_episodes: 5000
@@ -131,5 +117,4 @@ full_training:
       min_stop_rate: 0.05
 
 # Canonical CLI:
-#   python src/training/train.py --experiment underwater_dqn_v1 --phase smoke_test
 #   python src/training/train.py --experiment underwater_dqn_v1 --phase full_training

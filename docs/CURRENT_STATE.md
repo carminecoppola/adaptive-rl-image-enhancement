@@ -20,7 +20,7 @@ Questo file è il riferimento canonico del branch per capire da dove ripartire.
 - Le run paired UIEB usano ora davvero:
   - dataset paired degradato + reference
   - action set `underwater_curated_v1`
-  - override di fase `smoke_test` / `full_training`
+  - override di fase `full_training`
 
 ## Consolidamenti già applicati
 
@@ -61,23 +61,21 @@ e se passa i controlli di evaluation:
   - integrazione paired UIEB e action set underwater corretta solo dopo questo consolidamento
   - action space precedente troppo ampio e popolato da operatori sistematicamente peggiorativi per il target PSNR-first
 
-## Prossima verifica ufficiale
+## Workflow ufficiale
 
-La prossima run da considerare ufficiale dovrà essere prodotta da:
+La run ufficiale va prodotta da:
 
 ```bash
 sbatch scripts/train_underwater.sbatch
 ```
 
-e dovrà completare:
+e deve completare:
 
-1. smoke training
-2. smoke evaluation minima
-3. full training
-4. baseline evaluation su best checkpoint
-5. baseline evaluation su final checkpoint
-6. OOD evaluation su `challenging-60`
-7. report canonico della run
+1. full training
+2. baseline evaluation su best checkpoint
+3. baseline evaluation su final checkpoint
+4. OOD evaluation su `challenging-60`
+5. report canonico della run
 
 ## File da considerare ufficiali
 
@@ -86,4 +84,4 @@ e dovrà completare:
 - `scripts/TRAINING_GUIDE.md`
 - `scripts/train_underwater.sbatch`
 - `configs/experiments/underwater_dqn_v1.yaml`
-- `notebooks/underwater_policy_analysis.ipynb`
+- `underwater_policy_analysis.ipynb`

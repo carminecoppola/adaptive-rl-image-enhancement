@@ -509,7 +509,6 @@ def train() -> None:
         "seed": seed,
         "dataset_root": dataset_root,
         "reward_metric": reward_metric,
-        "action_set_name": action_set_name,
         "default_degradation_type": default_degradation_type,
         "candidate_degradation_types": candidate_degradation_types,
         "noise_std": noise_std,

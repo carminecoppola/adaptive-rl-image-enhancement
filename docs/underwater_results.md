@@ -6,19 +6,17 @@ Questo file è il riferimento canonico per i risultati underwater consolidati.
 
 - Il workflow ufficiale è stato consolidato.
 - Le run storiche underwater restano utili come riferimento esplorativo, ma non sono considerate definitive.
-- La prossima run eseguita con `scripts/train_underwater.sbatch` sarà la prima run da considerare ufficiale nel nuovo protocollo.
+- La run di riferimento va letta dagli artifact prodotti in `${LOGS_ROOT}/dqn/<RUN_ID>/`.
 
 ## Protocollo canonico
 
 Una run consolidata deve includere:
 
-1. smoke training
-2. smoke evaluation minima
-3. full training
-4. baseline evaluation su best checkpoint
-5. baseline evaluation su final checkpoint
-6. OOD evaluation su `challenging-60`
-7. report canonico della run
+1. full training
+2. baseline evaluation su best checkpoint
+3. baseline evaluation su final checkpoint
+4. OOD evaluation su `challenging-60`
+5. report canonico della run
 
 ## Dove leggere i risultati della run
 
@@ -26,7 +24,7 @@ Per ogni run ufficiale:
 
 - report markdown: `${LOGS_ROOT}/dqn/<RUN_ID>/underwater_results.md`
 - summary JSON: `${LOGS_ROOT}/dqn/<RUN_ID>/underwater_results_summary.json`
-- notebook di analisi: `notebooks/underwater_policy_analysis.ipynb`
+- notebook di analisi: `underwater_policy_analysis.ipynb`
 
 ## Nota metodologica
 

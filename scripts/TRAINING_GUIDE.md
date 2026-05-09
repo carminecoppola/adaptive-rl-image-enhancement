@@ -19,16 +19,11 @@ tail -f logs/sbatch_training_*.log
 
 `scripts/train_underwater.sbatch` esegue automaticamente:
 
-1. smoke training con `--phase smoke_test`
-2. smoke evaluation minima con `action_analysis.json` e `evaluation_baselines.json`
-3. gate minimo smoke:
-   - `mean_delta_psnr_positive`
-   - artifact di action analysis presenti
-4. full training con `--phase full_training`
-5. evaluation ID su best checkpoint
-6. evaluation ID su final checkpoint
-7. evaluation OOD su `UIEB/challenging-60`
-8. report canonico della run
+1. full training con `--phase full_training`
+2. evaluation ID su best checkpoint
+3. evaluation ID su final checkpoint
+4. evaluation OOD su `UIEB/challenging-60`
+5. report canonico della run
 
 ## Artifact attesi per la run full
 
@@ -54,12 +49,6 @@ Checkpoint attesi in `${CHECKPOINT_ROOT}/dqn/<RUN_ID>/`:
 
 ## Esecuzione manuale
 
-Smoke locale:
-
-```bash
-python src/training/train.py --experiment underwater_dqn_v1 --phase smoke_test
-```
-
 Full locale:
 
 ```bash
@@ -80,12 +69,10 @@ La sola config underwater ufficiale è:
 
 - `configs/experiments/underwater_dqn_v1.yaml`
 
-Le config e i launcher storici ridondanti sono stati spostati in `archive/`.
-
 ## Notebook finale
 
 Il notebook canonico da usare per l’analisi della run è:
 
-- `notebooks/underwater_policy_analysis.ipynb`
+- `underwater_policy_analysis.ipynb`
 
 Il notebook deve leggere gli artifact della run, non ricostruire risultati con logiche parallele.
