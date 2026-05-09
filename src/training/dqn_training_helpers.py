@@ -90,6 +90,7 @@ def build_env_for_image(
     terminal_reward_psnr_scale: float,
     terminal_reward_ssim_scale: float,
     include_step_channel: bool,
+    include_lab_stats: bool,
     action_set_name: str,
     degradation_type: str,
     noise_std: float,
@@ -128,6 +129,7 @@ def build_env_for_image(
         terminal_reward_psnr_scale=terminal_reward_psnr_scale,
         terminal_reward_ssim_scale=terminal_reward_ssim_scale,
         include_step_channel=include_step_channel,
+        include_lab_stats=include_lab_stats,
         action_set_name=action_set_name,
     )
 
@@ -151,6 +153,7 @@ def evaluate_on_indices(
     terminal_reward_psnr_scale: float,
     terminal_reward_ssim_scale: float,
     include_step_channel: bool,
+    include_lab_stats: bool,
     action_set_name: str,
     default_degradation_type: str,
     candidate_degradation_types: list[str],
@@ -190,6 +193,7 @@ def evaluate_on_indices(
             terminal_reward_psnr_scale=terminal_reward_psnr_scale,
             terminal_reward_ssim_scale=terminal_reward_ssim_scale,
             include_step_channel=include_step_channel,
+            include_lab_stats=include_lab_stats,
             action_set_name=action_set_name,
             degradation_type=degradation_type,
             noise_std=noise_std,

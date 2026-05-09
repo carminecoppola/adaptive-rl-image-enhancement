@@ -39,6 +39,7 @@ class ImageEnhancementEnv(gym.Env):
         terminal_reward_psnr_scale: float = 0.0,
         terminal_reward_ssim_scale: float = 0.0,
         include_step_channel: bool = True,
+        include_lab_stats: bool = False,
         action_set_name: str = "general",
     ) -> None:
         super().__init__()
@@ -70,6 +71,7 @@ class ImageEnhancementEnv(gym.Env):
         self.terminal_reward_psnr_scale = terminal_reward_psnr_scale
         self.terminal_reward_ssim_scale = terminal_reward_ssim_scale
         self.include_step_channel = include_step_channel
+        self.include_lab_stats = include_lab_stats
         self.action_set_name = action_set_name
 
         self.num_actions = get_num_actions(action_set_name)
@@ -77,7 +79,9 @@ class ImageEnhancementEnv(gym.Env):
 
         height, width = image_size[1], image_size[0]
 
-        channels = 4 if self.include_step_channel else 3
+        step_ch = 1 if self.include_step_channel else 0
+        lab_ch = 1 if self.include_lab_stats else 0
+        channels = 3 + step_ch + lab_ch
         self.observation_space = spaces.Box(
             low=0.0,
             high=1.0,
@@ -244,13 +248,33 @@ class ImageEnhancementEnv(gym.Env):
     def _image_to_observation(self, image: Image.Image) -> np.ndarray:
         array = np.asarray(image.convert("RGB"), dtype=np.float32)
         rgb = array / 255.0
-        if not self.include_step_channel:
-            return rgb
+        parts = [rgb]
 
-        step_ratio = min(1.0, self.current_step / max(1, self.max_steps))
-        step_plane = np.full(
-            (rgb.shape[0], rgb.shape[1], 1),
-            fill_value=step_ratio,
-            dtype=np.float32,
-        )
-        return np.concatenate([rgb, step_plane], axis=2)
+        if self.include_step_channel:
+            step_ratio = min(1.0, self.current_step / max(1, self.max_steps))
+            step_plane = np.full(
+                (rgb.shape[0], rgb.shape[1], 1),
+                fill_value=step_ratio,
+                dtype=np.float32,
+            )
+            parts.append(step_plane)
+
+        if self.include_lab_stats:
+            import cv2
+
+            arr_uint8 = (rgb * 255).astype(np.uint8)
+            lab = cv2.cvtColor(arr_uint8, cv2.COLOR_RGB2LAB).astype(np.float32)
+
+            l_mean = lab[:, :, 0].mean() / 255.0
+            l_std = lab[:, :, 0].std() / 255.0
+            a_mean = (lab[:, :, 1].mean() - 128.0) / 128.0
+            a_std = lab[:, :, 1].std() / 128.0
+            b_mean = (lab[:, :, 2].mean() - 128.0) / 128.0
+            b_std = lab[:, :, 2].std() / 128.0
+
+            h, w = rgb.shape[0], rgb.shape[1]
+            lab_value = float(np.clip(np.mean([l_mean, l_std, a_mean, a_std, b_mean, b_std]), 0.0, 1.0))
+            lab_plane = np.full((h, w, 1), fill_value=lab_value, dtype=np.float32)
+            parts.append(lab_plane)
+
+        return np.concatenate(parts, axis=2)

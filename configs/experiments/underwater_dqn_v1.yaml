@@ -37,6 +37,7 @@ environment:
   name: "underwater_image_enhancement"
   max_steps: 3
   include_step_channel: true
+  include_lab_stats: true
   action_set: "underwater_curated_v1"
   observation_type: "image_with_step_channel"
 
