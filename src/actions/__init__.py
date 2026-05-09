@@ -5,6 +5,7 @@ Supports multiple action sets:
 - "general": Generic actions (brightness, contrast, sharpen, etc.)
 - "underwater_v1": Underwater-specific 15-action set.
 - "underwater_curated_v1": Small underwater-focused action set tuned for stable RL.
+- "underwater_extended_v1": OOD-focused underwater action set with broader coverage.
 """
 
 from __future__ import annotations
@@ -38,6 +39,13 @@ ACTION_SETS = {
         "action_descriptions": underwater_v1.CURATED_ACTION_DESCRIPTIONS,
         "num_actions": 4,  # 0-3 (STOP is 3)
         "apply_tensor_action": underwater_v1.apply_action_curated,
+    },
+    "underwater_extended_v1": {
+        "actions": underwater_v1,
+        "action_names": underwater_v1.EXTENDED_ACTION_NAMES,
+        "action_descriptions": underwater_v1.EXTENDED_ACTION_DESCRIPTIONS,
+        "num_actions": 8,  # 0-7 (STOP is 7)
+        "apply_tensor_action": underwater_v1.apply_action_extended,
     },
 }
 

@@ -9,8 +9,10 @@ from torch import Tensor
 from src.actions.underwater_v1 import (
     UNDERWATER_V1_ACTIONS,
     UNDERWATER_CURATED_V1_ACTIONS,
+    UNDERWATER_EXTENDED_V1_ACTIONS,
     ACTION_NAMES,
     CURATED_ACTION_NAMES,
+    EXTENDED_ACTION_NAMES,
     white_balance_grayworld,
     brightness_up,
     brightness_down,
@@ -28,7 +30,9 @@ from src.actions.underwater_v1 import (
     stop,
     apply_action,
     apply_action_curated,
+    apply_action_extended,
 )
+from src.actions import get_num_actions, get_stop_action_id
 
 
 @pytest.fixture
@@ -207,6 +211,33 @@ def test_apply_curated_action_by_id(dummy_image):
         result = apply_action_curated(dummy_image, action_id)
         assert result.shape == dummy_image.shape
         assert result.min() >= 0 and result.max() <= 1
+
+
+def test_extended_action_set_complete():
+    """Test extended action metadata matches action registry."""
+    assert len(UNDERWATER_EXTENDED_V1_ACTIONS) == 8
+    for action_id in UNDERWATER_EXTENDED_V1_ACTIONS.keys():
+        assert action_id in EXTENDED_ACTION_NAMES
+
+
+def test_apply_extended_action_by_id(dummy_image):
+    """Test apply_action_extended function across all OOD actions."""
+    for action_id in UNDERWATER_EXTENDED_V1_ACTIONS.keys():
+        result = apply_action_extended(dummy_image, action_id)
+        assert result.shape == dummy_image.shape
+        assert result.min() >= 0 and result.max() <= 1
+
+
+def test_apply_extended_stop_action_preserves_image(dummy_image):
+    """Test STOP action in the extended set leaves the image unchanged."""
+    result = apply_action_extended(dummy_image, 7)
+    assert torch.allclose(result, dummy_image)
+
+
+def test_extended_action_registry_metadata():
+    """Test the action registry exposes the new extended set correctly."""
+    assert get_num_actions("underwater_extended_v1") == 8
+    assert get_stop_action_id("underwater_extended_v1") == 7
 
 
 def test_sequence_of_actions(dummy_image):

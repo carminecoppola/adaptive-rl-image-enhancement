@@ -31,3 +31,26 @@ Per ogni run ufficiale:
 - I risultati ID paired sono riportati come delta PSNR / delta SSIM rispetto all’input degradato.
 - I risultati OOD `challenging-60` non hanno reference e sono quindi riportati con metriche no-reference.
 - Il confronto con Bologna va letto con cautela perché Bologna riporta metriche assolute, mentre il nostro workflow usa soprattutto metriche differenziali.
+
+## Template nuova run post-fix OOD
+
+- Data: `2026-05-09`
+- Run ID: `<da compilare>`
+- Config: `configs/experiments/underwater_dqn_v1.yaml`
+- Modifiche attive:
+  - Fix 1: canale LAB globale nell'osservazione
+  - Fix 2: reward combinato con `psnr_weight=1.0` e `ssim_weight=5.0`
+  - Fix 3: action set `underwater_extended_v1`, `max_steps=5`
+- Risultati ID attesi da compilare:
+  - `mean_delta_psnr`: `<...>`
+  - `output_psnr`: `<...>`
+  - `output_ssim`: `<...>`
+  - `stop_rate`: `<...>`
+  - `dominant_action_share`: `<...>`
+- Risultati OOD attesi da compilare:
+  - `mean_delta_uciqe`: `<...>`
+  - `mean_delta_uiqm_proxy`: `<...>`
+- Confronto con run precedente:
+  - `delta mean_delta_psnr`: `<...>`
+  - `delta mean_delta_uciqe`: `<...>`
+  - `delta mean_delta_uiqm_proxy`: `<...>`

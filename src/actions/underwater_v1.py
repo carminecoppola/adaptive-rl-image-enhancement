@@ -365,6 +365,18 @@ UNDERWATER_CURATED_V1_ACTIONS = {
     3: stop,
 }
 
+# Extended curated set: 8 actions that cover more OOD degradation modes.
+UNDERWATER_EXTENDED_V1_ACTIONS = {
+    0: white_balance_grayworld,
+    1: contrast_up,
+    2: contrast_down,
+    3: clahe,
+    4: red_channel_boost,
+    5: gamma_up,
+    6: sharpen,
+    7: stop,
+}
+
 # Alternative mappings for reference
 ACTION_NAMES = {
     0: "white_balance",
@@ -416,6 +428,28 @@ CURATED_ACTION_DESCRIPTIONS = {
     3: "STOP (terminate)",
 }
 
+EXTENDED_ACTION_NAMES = {
+    0: "white_balance",
+    1: "contrast_up",
+    2: "contrast_down",
+    3: "clahe",
+    4: "red_channel_boost",
+    5: "gamma_up",
+    6: "sharpen",
+    7: "stop",
+}
+
+EXTENDED_ACTION_DESCRIPTIONS = {
+    0: "White balance (Grayworld) — corregge cast cromatico",
+    1: "Increase contrast — scattering basso",
+    2: "Decrease contrast — over-contrast su scene particolari",
+    3: "CLAHE — contrasto adattivo locale, robusto OOD",
+    4: "Red channel boost — perdita rosso per profondita",
+    5: "Gamma up — immagini molto scure",
+    6: "Sharpen — blur da scattering",
+    7: "STOP (terminate)",
+}
+
 
 def apply_action(image: Tensor, action_id: int) -> Tensor:
     """
@@ -450,6 +484,15 @@ def apply_action_curated(image: Tensor, action_id: int) -> Tensor:
         raise ValueError(f"Unknown curated action ID: {action_id}")
 
     action_fn = UNDERWATER_CURATED_V1_ACTIONS[action_id]
+    return action_fn(image)
+
+
+def apply_action_extended(image: Tensor, action_id: int) -> Tensor:
+    """Apply action from the extended underwater action set."""
+    if action_id not in UNDERWATER_EXTENDED_V1_ACTIONS:
+        raise ValueError(f"Unknown extended action ID: {action_id}")
+
+    action_fn = UNDERWATER_EXTENDED_V1_ACTIONS[action_id]
     return action_fn(image)
 
 

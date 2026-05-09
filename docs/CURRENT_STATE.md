@@ -85,3 +85,17 @@ e deve completare:
 - `scripts/train_underwater.sbatch`
 - `configs/experiments/underwater_dqn_v1.yaml`
 - `underwater_policy_analysis.ipynb`
+
+## OOD improvements applied
+
+Data: `2026-05-09`
+Run ID: `<da compilare dopo la nuova run>`
+
+Modifiche applicate:
+- Fix 1: feature cromatiche LAB aggiunte all'osservazione come canale globale extra
+- Fix 2: `psnr_weight` e `ssim_weight` ora sono letti dalla config YAML e passati davvero all'environment
+- Fix 3: action set canonico passato da `underwater_curated_v1` (4 azioni) a `underwater_extended_v1` (8 azioni) con `max_steps=5`
+
+Risultati ID: `<compilare da evaluation_baselines_best.json>`
+Risultati OOD: `<compilare da evaluation_ood_challenging60.json>`
+Confronto con run precedente: `<delta da compilare dopo la nuova run>`
