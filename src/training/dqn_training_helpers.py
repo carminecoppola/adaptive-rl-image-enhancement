@@ -95,6 +95,8 @@ def build_env_for_image(
     degradation_type: str,
     noise_std: float,
     degraded_image: Image.Image | None = None,
+    psnr_weight: float = 1.0,
+    ssim_weight: float = 10.0,
 ) -> ImageEnhancementEnv:
     """
     Build environment for a single image.
@@ -128,6 +130,8 @@ def build_env_for_image(
         stop_action_bonus=stop_action_bonus,
         terminal_reward_psnr_scale=terminal_reward_psnr_scale,
         terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+        psnr_weight=psnr_weight,
+        ssim_weight=ssim_weight,
         include_step_channel=include_step_channel,
         include_lab_stats=include_lab_stats,
         action_set_name=action_set_name,
@@ -158,6 +162,8 @@ def evaluate_on_indices(
     default_degradation_type: str,
     candidate_degradation_types: list[str],
     noise_std: float,
+    psnr_weight: float = 1.0,
+    ssim_weight: float = 10.0,
 ) -> EvalStats:
     old_epsilon = agent.epsilon
     agent.epsilon = 0.0
@@ -192,6 +198,8 @@ def evaluate_on_indices(
             stop_action_bonus=stop_action_bonus,
             terminal_reward_psnr_scale=terminal_reward_psnr_scale,
             terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+            psnr_weight=psnr_weight,
+            ssim_weight=ssim_weight,
             include_step_channel=include_step_channel,
             include_lab_stats=include_lab_stats,
             action_set_name=action_set_name,

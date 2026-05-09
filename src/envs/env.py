@@ -38,6 +38,8 @@ class ImageEnhancementEnv(gym.Env):
         stop_action_bonus: float = 0.0,
         terminal_reward_psnr_scale: float = 0.0,
         terminal_reward_ssim_scale: float = 0.0,
+        psnr_weight: float = 1.0,
+        ssim_weight: float = 10.0,
         include_step_channel: bool = True,
         include_lab_stats: bool = False,
         action_set_name: str = "general",
@@ -70,6 +72,8 @@ class ImageEnhancementEnv(gym.Env):
         self.stop_action_bonus = stop_action_bonus
         self.terminal_reward_psnr_scale = terminal_reward_psnr_scale
         self.terminal_reward_ssim_scale = terminal_reward_ssim_scale
+        self.psnr_weight = psnr_weight
+        self.ssim_weight = ssim_weight
         self.include_step_channel = include_step_channel
         self.include_lab_stats = include_lab_stats
         self.action_set_name = action_set_name
@@ -241,7 +245,7 @@ class ImageEnhancementEnv(gym.Env):
         if self.reward_metric == "combined":
             psnr = compute_psnr(image, self.clean_image)
             ssim = compute_ssim(image, self.clean_image)
-            return psnr + 10.0 * ssim
+            return self.psnr_weight * psnr + self.ssim_weight * ssim
 
         raise ValueError(f"Unsupported reward metric: {self.reward_metric}")
 

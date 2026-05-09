@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image
 
 from src.envs.env import ImageEnhancementEnv
+from src.metrics import compute_psnr, compute_ssim
 
 
 def make_env() -> ImageEnhancementEnv:
@@ -65,6 +66,57 @@ def test_env_without_lab_stats_keeps_4_channel_shape() -> None:
     observation, _ = env.reset()
     assert env.observation_space.shape == (32, 32, 4)
     assert observation.shape == (32, 32, 4)
+
+
+def test_combined_quality_uses_configurable_reward_weights() -> None:
+    clean_image = Image.new("RGB", (32, 32), color=(180, 180, 180))
+    degraded_image = Image.new("RGB", (32, 32), color=(120, 140, 180))
+    psnr_only_env = ImageEnhancementEnv(
+        clean_image=clean_image,
+        degraded_image=degraded_image,
+        reward_metric="combined",
+        psnr_weight=1.0,
+        ssim_weight=0.0,
+        include_step_channel=True,
+        action_set_name="underwater_curated_v1",
+    )
+    ssim_only_env = ImageEnhancementEnv(
+        clean_image=clean_image,
+        degraded_image=degraded_image,
+        reward_metric="combined",
+        psnr_weight=0.0,
+        ssim_weight=1.0,
+        include_step_channel=True,
+        action_set_name="underwater_curated_v1",
+    )
+
+    psnr_only_quality = psnr_only_env._compute_quality(psnr_only_env.initial_degraded_image)
+    ssim_only_quality = ssim_only_env._compute_quality(ssim_only_env.initial_degraded_image)
+
+    assert psnr_only_quality != ssim_only_quality
+
+
+def test_combined_quality_matches_legacy_formula_with_default_weights() -> None:
+    clean_image = Image.new("RGB", (32, 32), color=(180, 180, 180))
+    degraded_image = Image.new("RGB", (32, 32), color=(120, 140, 180))
+    env = ImageEnhancementEnv(
+        clean_image=clean_image,
+        degraded_image=degraded_image,
+        reward_metric="combined",
+        psnr_weight=1.0,
+        ssim_weight=10.0,
+        include_step_channel=True,
+        action_set_name="underwater_curated_v1",
+    )
+
+    quality = env._compute_quality(env.initial_degraded_image)
+    psnr = compute_psnr(env.initial_degraded_image, env.clean_image)
+    ssim = compute_ssim(env.initial_degraded_image, env.clean_image)
+    expected = env.psnr_weight * psnr + env.ssim_weight * ssim
+    legacy = psnr + 10.0 * ssim
+
+    assert np.isclose(quality, expected)
+    assert np.isclose(quality, legacy)
 
 
 def test_step_returns_valid_transition() -> None:

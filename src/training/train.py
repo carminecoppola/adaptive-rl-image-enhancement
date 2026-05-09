@@ -135,6 +135,7 @@ def train() -> None:
     dataset_image_size = get_effective_image_size(dataset_core_cfg)
     image_size = (dataset_image_size, dataset_image_size)
     include_step_channel = bool(env_config.get("include_step_channel", True))
+    include_lab_stats = bool(env_config.get("include_lab_stats", False))
     action_set_name = str(env_config.get("action_set", "general"))
     use_psnr = bool(reward_config.get("use_psnr", True))
     use_ssim = bool(reward_config.get("use_ssim", False))
@@ -150,6 +151,8 @@ def train() -> None:
     step_penalty = float(reward_config.get("step_penalty", 0.01))
     repeated_action_penalty = float(reward_config.get("repeated_action_penalty", 0.0))
     no_improvement_penalty = float(reward_config.get("no_improvement_penalty", 0.0))
+    psnr_weight = float(reward_config.get("psnr_weight", 1.0))
+    ssim_weight = float(reward_config.get("ssim_weight", 10.0))
     stop_bonus_scale = float(reward_config.get("stop_bonus_scale", 0.0))
     stop_no_improvement_penalty = float(reward_config.get("stop_no_improvement_penalty", 0.0))
     early_stop_min_improvement = float(reward_config.get("early_stop_min_improvement", 0.0))
@@ -230,7 +233,10 @@ def train() -> None:
         stop_action_bonus=stop_action_bonus,
         terminal_reward_psnr_scale=terminal_reward_psnr_scale,
         terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+        psnr_weight=psnr_weight,
+        ssim_weight=ssim_weight,
         include_step_channel=include_step_channel,
+        include_lab_stats=include_lab_stats,
         action_set_name=action_set_name,
         degradation_type=sample_degradation_type,
         noise_std=noise_std,
@@ -325,7 +331,10 @@ def train() -> None:
             stop_action_bonus=stop_action_bonus,
             terminal_reward_psnr_scale=terminal_reward_psnr_scale,
             terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+            psnr_weight=psnr_weight,
+            ssim_weight=ssim_weight,
             include_step_channel=include_step_channel,
+            include_lab_stats=include_lab_stats,
             action_set_name=action_set_name,
             degradation_type=episode_degradation_type,
             noise_std=noise_std,
@@ -446,7 +455,10 @@ def train() -> None:
                 stop_action_bonus=stop_action_bonus,
                 terminal_reward_psnr_scale=terminal_reward_psnr_scale,
                 terminal_reward_ssim_scale=terminal_reward_ssim_scale,
+                psnr_weight=psnr_weight,
+                ssim_weight=ssim_weight,
                 include_step_channel=include_step_channel,
+                include_lab_stats=include_lab_stats,
                 action_set_name=action_set_name,
                 default_degradation_type=default_degradation_type,
                 candidate_degradation_types=candidate_degradation_types,
