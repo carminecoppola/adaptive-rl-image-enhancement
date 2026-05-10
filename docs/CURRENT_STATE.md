@@ -114,3 +114,14 @@ Confronto con run precedente:
 - Il reward combinato usa ora in modo coerente `psnr_weight` e `ssim_weight` in training, helper di costruzione env ed evaluation.
 - Il fallback di retrocompatibilita' resta `psnr_weight=1.0`, `ssim_weight=10.0`, che replica il comportamento storico della baseline buona.
 - Le metriche e i gate delle evaluation usano ora gli stessi pesi letti dal config effettivo della run, evitando divergenze tra training e analisi offline.
+
+## Baseline reset v3.0
+
+- `configs/experiments/underwater_dqn_v1.yaml` e' stato riallineato alla baseline di riferimento `dqn_underwater_full_20260508_184539_1488`.
+- Il workflow canonico torna a usare:
+  - `max_steps=3`
+  - `underwater_curated_v1`
+  - `psnr_weight=1.0`
+  - `ssim_weight=10.0`
+  - `dominant_action_threshold=0.50`
+- Il supporto a `include_lab_stats` e `underwater_extended_v1` resta nel codice, ma non fa piu' parte della configurazione ufficiale finche' non vince un'ablation controllata.

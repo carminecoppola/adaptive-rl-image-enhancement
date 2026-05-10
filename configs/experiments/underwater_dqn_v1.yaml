@@ -1,17 +1,19 @@
-# Underwater Image Enhancement DQN v2.0 Configuration
-# Canonical experiment config for the underwater-first workflow.
+# Underwater Image Enhancement DQN v3.0 Configuration
+# Canonical baseline config for the underwater-first workflow.
 
 metadata:
   name: "underwater_dqn_v1"
-  description: "DDQN for paired UIEB underwater enhancement with extended underwater action set"
+  description: "DDQN for paired UIEB underwater enhancement with curated underwater action set"
   phase: "Phase 7 - Underwater Consolidation"
-  version: "2.1"
+  version: "3.0"
   date_created: "2026-05-08"
   notes:
     - "This config reflects the actual image-based environment used by the codebase."
     - "UIEB samples are paired: degraded input + reference target."
     - "Best checkpoint selection uses a fixed evaluation tracking subset."
-    - "The extended underwater action set broadens coverage for harder out-of-distribution degradations."
+    - "v3.0 restores the baseline configuration that produced +1.09 dB on paired UIEB."
+    - "Reward combined now reads psnr_weight and ssim_weight from config."
+    - "ssim_weight=10.0 preserves backward compatibility with the reference baseline run."
 
 dataset:
   name: "uieb"
@@ -35,10 +37,9 @@ degradation:
 
 environment:
   name: "underwater_image_enhancement"
-  max_steps: 5
+  max_steps: 3
   include_step_channel: true
-  include_lab_stats: true
-  action_set: "underwater_extended_v1"
+  action_set: "underwater_curated_v1"
   observation_type: "image_with_step_channel"
 
 reward:
@@ -46,7 +47,7 @@ reward:
   use_ssim: true
   use_perceptual_loss: false
   psnr_weight: 1.0
-  ssim_weight: 5.0
+  ssim_weight: 10.0
   step_penalty: 0.01
   repeated_action_penalty: 0.005
   no_improvement_penalty: 0.02
@@ -108,9 +109,6 @@ full_training:
     num_episodes: 5000
     num_eval_episodes: 50
     eval_every: 10
-  environment:
-    max_steps: 5
-    action_set: "underwater_extended_v1"
   dataset:
     train_subset_size: 5000
     eval_subset_size: 500
