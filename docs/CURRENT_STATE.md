@@ -125,3 +125,14 @@ Confronto con run precedente:
   - `ssim_weight=10.0`
   - `dominant_action_threshold=0.50`
 - Il supporto a `include_lab_stats` e `underwater_extended_v1` resta nel codice, ma non fa piu' parte della configurazione ufficiale finche' non vince un'ablation controllata.
+
+## Bologna reporting
+
+- Il report canonico underwater ora deve esporre sia le metriche delta del framework sia le metriche assolute `output_psnr` e `output_ssim`.
+- La sezione Bologna del report viene usata per confrontare:
+  - PSNR assoluto in output
+  - SSIM assoluto in output
+  - numero di episodi
+  - dimensione dell'action space
+  - dataset di riferimento
+- La nota metodologica resta obbligatoria: il confronto con Bologna e' indicativo e non perfettamente apples-to-apples.
