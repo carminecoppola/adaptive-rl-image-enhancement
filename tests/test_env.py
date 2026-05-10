@@ -171,21 +171,6 @@ def test_stop_action_terminates() -> None:
     assert info["terminated"] is True
 
 
-def test_underwater_action_set_initialization() -> None:
-    clean_image = Image.new("RGB", (32, 32), color=(180, 180, 180))
-    degraded_image = Image.new("RGB", (32, 32), color=(120, 120, 120))
-    env = ImageEnhancementEnv(
-        clean_image=clean_image,
-        degraded_image=degraded_image,
-        max_steps=5,
-        image_size=(32, 32),
-        include_step_channel=True,
-        action_set_name="underwater_v1",
-    )
-    assert env.action_space.n == 15
-    assert env.stop_action == 14
-
-
 def test_curated_underwater_action_set_initialization() -> None:
     clean_image = Image.new("RGB", (32, 32), color=(180, 180, 180))
     degraded_image = Image.new("RGB", (32, 32), color=(120, 120, 120))
@@ -199,3 +184,18 @@ def test_curated_underwater_action_set_initialization() -> None:
     )
     assert env.action_space.n == 4
     assert env.stop_action == 3
+
+
+def test_extended_underwater_action_set_initialization() -> None:
+    clean_image = Image.new("RGB", (32, 32), color=(180, 180, 180))
+    degraded_image = Image.new("RGB", (32, 32), color=(120, 120, 120))
+    env = ImageEnhancementEnv(
+        clean_image=clean_image,
+        degraded_image=degraded_image,
+        max_steps=5,
+        image_size=(32, 32),
+        include_step_channel=True,
+        action_set_name="underwater_extended_v1",
+    )
+    assert env.action_space.n == 8
+    assert env.stop_action == 7

@@ -16,7 +16,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.actions.filters import ImageAction
 from src.agents import DQNAgent
 from src.data import get_dataset_name, get_effective_image_size, load_train_dataset
 from src.evaluation.run_context import load_run_config_bundle

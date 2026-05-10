@@ -2,8 +2,7 @@
 Action registry system for RL image enhancement.
 
 Supports multiple action sets:
-- "general": Generic actions (brightness, contrast, sharpen, etc.)
-- "underwater_v1": Underwater-specific 15-action set.
+- "general": Generic compatibility actions used by classical baseline policies.
 - "underwater_curated_v1": Small underwater-focused action set tuned for stable RL.
 - "underwater_extended_v1": OOD-focused underwater action set with broader coverage.
 """
@@ -25,13 +24,6 @@ ACTION_SETS = {
         "action_names": filters.ACTION_NAMES,
         "num_actions": 9,  # 0-8 (STOP is 8)
         "apply_tensor_action": filters.apply_action,
-    },
-    "underwater_v1": {
-        "actions": underwater_v1,
-        "action_names": underwater_v1.ACTION_NAMES,
-        "action_descriptions": underwater_v1.ACTION_DESCRIPTIONS,
-        "num_actions": 15,  # 0-14 (STOP is 14)
-        "apply_tensor_action": underwater_v1.apply_action,
     },
     "underwater_curated_v1": {
         "actions": underwater_v1,
@@ -55,7 +47,7 @@ def get_action_set(name: str):
     Get action set by name.
     
     Args:
-        name: Action set name ("general" or "underwater_v1")
+        name: Action set name registered in ``ACTION_SETS``
     
     Returns:
         Action set module/dict

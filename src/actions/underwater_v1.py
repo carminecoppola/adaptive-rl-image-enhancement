@@ -10,6 +10,10 @@ Each action is a pure function: Tensor → Tensor
 - Deterministic: same input → same output
 """
 
+# Nota: la configurazione finale usa solo `underwater_curated_v1` (4 azioni).
+# Le funzioni non incluse nel set curato sono mantenute per documentazione
+# delle scelte di design e per estensioni future.
+
 import torch
 import torch.nn.functional as F
 import cv2
@@ -339,25 +343,6 @@ def stop(image: Tensor) -> Tensor:
 # Action Registry
 # ============================================================================
 
-UNDERWATER_V1_ACTIONS = {
-    0: white_balance_grayworld,
-    1: brightness_up,
-    2: brightness_down,
-    3: contrast_up,
-    4: contrast_down,
-    5: red_channel_boost,
-    6: gamma_up,
-    7: gamma_down,
-    8: gaussian_denoise,
-    9: sharpen,
-    10: emboss,
-    11: histogram_eq,
-    12: clahe,
-    13: dark_channel_prior,
-    14: stop,  # ID 14 for STOP (flexible, could be 19 later)
-    # 15-19 reserved for future
-}
-
 UNDERWATER_CURATED_V1_ACTIONS = {
     0: white_balance_grayworld,
     1: contrast_up,
@@ -375,43 +360,6 @@ UNDERWATER_EXTENDED_V1_ACTIONS = {
     5: gamma_up,
     6: sharpen,
     7: stop,
-}
-
-# Alternative mappings for reference
-ACTION_NAMES = {
-    0: "white_balance",
-    1: "brightness_up",
-    2: "brightness_down",
-    3: "contrast_up",
-    4: "contrast_down",
-    5: "red_channel_boost",
-    6: "gamma_up",
-    7: "gamma_down",
-    8: "gaussian_denoise",
-    9: "sharpen",
-    10: "emboss",
-    11: "histogram_eq",
-    12: "clahe",
-    13: "dcp_dehaze",
-    14: "stop",
-}
-
-ACTION_DESCRIPTIONS = {
-    0: "White balance (Grayworld)",
-    1: "Increase brightness",
-    2: "Decrease brightness",
-    3: "Increase contrast",
-    4: "Decrease contrast",
-    5: "Boost red channel",
-    6: "Gamma correction up",
-    7: "Gamma correction down",
-    8: "Gaussian denoise",
-    9: "Sharpen edges",
-    10: "Emboss texture",
-    11: "Histogram equalization",
-    12: "CLAHE",
-    13: "DCP dehazing",
-    14: "STOP (terminate)",
 }
 
 CURATED_ACTION_NAMES = {
@@ -449,26 +397,6 @@ EXTENDED_ACTION_DESCRIPTIONS = {
     6: "Sharpen — blur da scattering",
     7: "STOP (terminate)",
 }
-
-
-def apply_action(image: Tensor, action_id: int) -> Tensor:
-    """
-    Apply action by ID.
-    
-    Args:
-        image: Tensor [0, 1]
-        action_id: Integer action ID
-    
-    Returns:
-        Enhanced image tensor [0, 1]
-    """
-    if action_id not in UNDERWATER_V1_ACTIONS:
-        raise ValueError(f"Unknown action ID: {action_id}")
-    
-    action_fn = UNDERWATER_V1_ACTIONS[action_id]
-    return action_fn(image)
-
-
 def apply_action_curated(image: Tensor, action_id: int) -> Tensor:
     """
     Apply action by ID for the curated underwater action set.
@@ -494,22 +422,3 @@ def apply_action_extended(image: Tensor, action_id: int) -> Tensor:
 
     action_fn = UNDERWATER_EXTENDED_V1_ACTIONS[action_id]
     return action_fn(image)
-
-
-if __name__ == "__main__":
-    # Quick test
-    print("Testing underwater actions...")
-    
-    # Create dummy image
-    dummy_image = torch.rand(3, 128, 128)
-    
-    for action_id, action_fn in UNDERWATER_V1_ACTIONS.items():
-        try:
-            result = action_fn(dummy_image)
-            assert result.shape == dummy_image.shape
-            assert result.min() >= 0 and result.max() <= 1
-            print(f"✓ Action {action_id} ({ACTION_NAMES[action_id]}): OK")
-        except Exception as e:
-            print(f"✗ Action {action_id} ({ACTION_NAMES[action_id]}): FAILED - {e}")
-    
-    print("\n✓ All actions tested!")
