@@ -212,3 +212,18 @@ Confronto con run precedente:
   - Ablation B non viene promossa a configurazione finale
   - l'action set esteso resta utile come evidenza che migliora OOD, ma non passa il tradeoff ID/OOD richiesto
   - per Ablation C il riferimento resta la configurazione di A: `max_steps=5`, `underwater_curated_v1`
+
+## Ablation C status
+
+- Config sperimentale preparata: `configs/experiments/ablation_C_lab_stats.yaml`
+- Modifica isolata rispetto al riferimento A:
+  - `include_lab_stats: false -> true`
+  - `max_steps=5`, `underwater_curated_v1`, reward weights e seed invariati
+  - `num_episodes=7000` per accomodare il cambio di observation space
+- Verifica preliminare:
+  - env con LAB: `channels = 5`
+  - action space invariato: `num_actions = 4`
+- Run lanciata:
+  - job Slurm: `1493`
+  - experiment: `ablation_C_lab_stats`
+- I risultati di C vanno confrontati contro il riferimento A e poi contro la baseline ufficiale `1490` per la scelta finale
