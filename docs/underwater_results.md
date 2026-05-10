@@ -54,3 +54,28 @@ Per ogni run ufficiale:
   - `delta mean_delta_psnr`: `<...>`
   - `delta mean_delta_uciqe`: `<...>`
   - `delta mean_delta_uiqm_proxy`: `<...>`
+
+## Baseline v3.0 — `dqn_underwater_full_20260510_104821_1490`
+
+- Config: `configs/experiments/underwater_dqn_v1.yaml`
+- Goal: ristabilire la baseline canonica dopo la regressione della run `1489`
+- Best checkpoint:
+  - episode `430`
+  - `mean_delta_psnr = +1.5089`
+  - `output_psnr = 18.6754`
+  - `output_ssim = 0.8318`
+  - `acceptance = true`
+- Final checkpoint:
+  - `mean_delta_psnr = +0.7461`
+  - `output_psnr = 17.9126`
+  - `output_ssim = 0.8032`
+  - `acceptance = true`
+- OOD challenging-60:
+  - `mean_delta_uciqe = -0.2504`
+  - `mean_delta_uiqm_proxy = -0.0161`
+- Confronto:
+  - meglio della baseline storica `1488` sul best checkpoint ID
+  - molto meglio della run regressa `1489` su ID
+  - OOD quasi allineato alla baseline storica e nettamente migliore di `1489`
+- Decisione:
+  - `1490` diventa il riferimento ufficiale per tutte le ablation OOD successive

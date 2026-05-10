@@ -136,3 +136,25 @@ Confronto con run precedente:
   - dimensione dell'action space
   - dataset di riferimento
 - La nota metodologica resta obbligatoria: il confronto con Bologna e' indicativo e non perfettamente apples-to-apples.
+
+## Baseline run v3.0 confirmed
+
+- Run ID: `dqn_underwater_full_20260510_104821_1490`
+- Best checkpoint:
+  - episode `430`
+  - `mean_delta_psnr = +1.5089`
+  - `output_psnr = 18.6754`
+  - `output_ssim = 0.8318`
+  - `acceptance = true`
+- Final checkpoint:
+  - `mean_delta_psnr = +0.7461`
+  - `output_psnr = 17.9126`
+  - `output_ssim = 0.8032`
+  - `acceptance = true`
+- OOD challenging-60:
+  - `mean_delta_uciqe = -0.2504`
+  - `mean_delta_uiqm_proxy = -0.0161`
+- Stato:
+  - la baseline v3.0 e' confermata
+  - la run supera Bologna sul best checkpoint sia in PSNR assoluto sia in SSIM assoluto
+  - le future ablation OOD vanno confrontate contro `1490`, usando il best checkpoint come metrica primaria
