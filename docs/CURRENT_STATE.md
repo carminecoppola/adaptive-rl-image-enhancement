@@ -158,3 +158,15 @@ Confronto con run precedente:
   - la baseline v3.0 e' confermata
   - la run supera Bologna sul best checkpoint sia in PSNR assoluto sia in SSIM assoluto
   - le future ablation OOD vanno confrontate contro `1490`, usando il best checkpoint come metrica primaria
+
+## Ablation A status
+
+- Config sperimentale preparata: `configs/experiments/ablation_A_max_steps5.yaml`
+- Modifica isolata rispetto alla baseline `1490`:
+  - `max_steps: 3 -> 5`
+- Supporto multi-experiment abilitato in `train.py`
+- `scripts/train_underwater.sbatch` ora accetta `EXPERIMENT` come override
+- Run lanciata:
+  - job Slurm: `1491`
+  - experiment: `ablation_A_max_steps5`
+- I risultati di A vanno letti solo dopo il completamento della pipeline e confrontati contro la baseline `1490`

@@ -57,13 +57,20 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
 
 
 def train() -> None:
+    supported_experiments = {
+        "underwater_dqn_v1",
+        "ablation_A_max_steps5",
+        "ablation_B_extended_actions",
+        "ablation_C_lab_stats",
+    }
+
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Train the canonical DDQN agent for underwater image enhancement.")
     parser.add_argument(
         "--experiment",
         type=str,
         default="underwater_dqn_v1",
-        help="Canonical experiment name. Only 'underwater_dqn_v1' is supported.",
+        help="Canonical experiment name or approved ablation config.",
     )
     parser.add_argument(
         "--phase",
@@ -73,11 +80,9 @@ def train() -> None:
     )
     args = parser.parse_args()
 
-    if args.experiment != "underwater_dqn_v1":
-        raise ValueError(
-            "This repository now supports only the canonical underwater experiment "
-            "'underwater_dqn_v1'."
-        )
+    if args.experiment not in supported_experiments:
+        allowed = ", ".join(sorted(supported_experiments))
+        raise ValueError(f"Experiment must be one of: {allowed}")
 
     experiment_path = Path("configs/experiments") / f"{args.experiment}.yaml"
     if not experiment_path.exists():

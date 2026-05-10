@@ -31,6 +31,7 @@ mkdir -p "${LOGS_ROOT}" "${LOGS_ROOT}/dqn" "${CHECKPOINT_ROOT}"
 
 timestamp="$(date -u +%Y%m%d_%H%M%S)"
 job_id="${SLURM_JOB_ID:-local}"
+EXPERIMENT="${EXPERIMENT:-underwater_dqn_v1}"
 full_run_id="dqn_underwater_full_${timestamp}_${job_id}"
 
 full_best_ckpt="${CHECKPOINT_ROOT}/dqn/${full_run_id}/dqn_best_policy_net.pt"
@@ -43,6 +44,7 @@ echo "=========================================="
 echo "Job ID: ${job_id}"
 echo "Project root: ${PROJECT_ROOT}"
 echo "Full run id : ${full_run_id}"
+echo "Experiment  : ${EXPERIMENT}"
 echo "DATASET_ROOT=${DATASET_ROOT}"
 echo "LOGS_ROOT=${LOGS_ROOT}"
 echo "CHECKPOINT_ROOT=${CHECKPOINT_ROOT}"
@@ -51,7 +53,7 @@ echo "=========================================="
 echo ""
 echo "[1/3] Full training"
 RUN_ID="${full_run_id}" python3 src/training/train.py \
-  --experiment underwater_dqn_v1 \
+  --experiment "${EXPERIMENT}" \
   --phase full_training \
   2>&1 | tee -a "${full_log}"
 
