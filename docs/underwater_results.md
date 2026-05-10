@@ -79,3 +79,79 @@ Per ogni run ufficiale:
   - OOD quasi allineato alla baseline storica e nettamente migliore di `1489`
 - Decisione:
   - `1490` diventa il riferimento ufficiale per tutte le ablation OOD successive
+
+## Ablation A — `dqn_underwater_full_20260510_111515_1491`
+
+- Config: `configs/experiments/ablation_A_max_steps5.yaml`
+- Modifica isolata:
+  - `max_steps: 3 -> 5`
+- Best checkpoint:
+  - episode `1730`
+  - `mean_delta_psnr = +1.5622`
+  - `output_psnr = 18.7287`
+  - `output_ssim = 0.8330`
+  - `acceptance = true`
+- OOD challenging-60:
+  - `mean_delta_uciqe = -0.2600`
+  - `mean_delta_uiqm_proxy = -0.0144`
+- Decisione:
+  - promossa come configurazione finale candidata
+  - migliora il best checkpoint ID rispetto a `1490`
+  - resta semplice: curated actions, niente LAB
+
+## Ablation B — `dqn_underwater_full_20260510_155811_1492`
+
+- Config: `configs/experiments/ablation_B_extended_actions.yaml`
+- Modifica isolata:
+  - `action_set: underwater_curated_v1 -> underwater_extended_v1`
+  - `max_steps=5` mantenuto
+- Best checkpoint:
+  - episode `1070`
+  - `mean_delta_psnr = +0.8762`
+  - `output_psnr = 18.0427`
+  - `output_ssim = 0.8145`
+  - `acceptance = true`
+- OOD challenging-60:
+  - `mean_delta_uciqe = -0.1677`
+  - `mean_delta_uiqm_proxy = -0.0095`
+- Decisione:
+  - non promossa
+  - migliora l'OOD ma degrada troppo l'ID
+
+## Ablation C — `dqn_underwater_full_20260510_162433_1493`
+
+- Config: `configs/experiments/ablation_C_lab_stats.yaml`
+- Modifica isolata:
+  - `include_lab_stats: false -> true`
+  - `max_steps=5` e curated actions mantenuti
+- Best checkpoint:
+  - episode `1650`
+  - `mean_delta_psnr = +1.5573`
+  - `output_psnr = 18.7238`
+  - `output_ssim = 0.8365`
+  - `acceptance = true`
+- Final checkpoint:
+  - `mean_delta_psnr = +1.3036`
+  - `output_psnr = 18.4700`
+  - `output_ssim = 0.8149`
+  - `acceptance = true`
+- OOD challenging-60:
+  - `mean_delta_uciqe = -0.3724`
+  - `mean_delta_uiqm_proxy = -0.0175`
+- Decisione:
+  - non promossa
+  - mantiene l'ID alto ma peggiora nettamente l'OOD
+
+## Configurazione finale v4.0
+
+- Config ufficiale: `configs/experiments/underwater_dqn_v1.yaml`
+- Scelta finale:
+  - `max_steps = 5`
+  - `action_set = underwater_curated_v1`
+  - `include_lab_stats = false`
+  - `psnr_weight = 1.0`
+  - `ssim_weight = 10.0`
+- Razionale:
+  - e' la miglior combinazione complessiva tra performance ID, stabilita' e semplicita'
+  - supera Bologna sul best checkpoint con un action space molto piu' piccolo
+  - evita sia la regressione ID dell'action set esteso sia la regressione OOD del canale LAB

@@ -226,4 +226,42 @@ Confronto con run precedente:
 - Run lanciata:
   - job Slurm: `1493`
   - experiment: `ablation_C_lab_stats`
-- I risultati di C vanno confrontati contro il riferimento A e poi contro la baseline ufficiale `1490` per la scelta finale
+- Risultati di C:
+  - run id: `dqn_underwater_full_20260510_162433_1493`
+  - best checkpoint (`ep 1650`):
+    - `mean_delta_psnr = +1.5573`
+    - `output_psnr = 18.7238`
+    - `output_ssim = 0.8365`
+    - `acceptance = true`
+  - final checkpoint:
+    - `mean_delta_psnr = +1.3036`
+    - `output_psnr = 18.4700`
+    - `output_ssim = 0.8149`
+    - `acceptance = true`
+  - OOD:
+    - `mean_delta_uciqe = -0.3724`
+    - `mean_delta_uiqm_proxy = -0.0175`
+- Confronto con riferimento A (`1491`):
+  - ID best resta sostanzialmente invariato (`+1.5573` vs `+1.5622`)
+  - `output_ssim` migliora leggermente
+  - OOD peggiora in modo netto su entrambe le metriche (`-0.3724` vs `-0.2600`, `-0.0175` vs `-0.0144`)
+- Decisione:
+  - Ablation C non viene promossa
+  - il canale LAB globale non migliora la generalizzazione OOD in questa forma
+
+## Configurazione finale selezionata
+
+- Config vincente: Ablation A
+  - `max_steps = 5`
+  - `action_set = underwater_curated_v1`
+  - `include_lab_stats = false`
+  - `psnr_weight = 1.0`
+  - `ssim_weight = 10.0`
+- Motivazione:
+  - migliora il best checkpoint ID rispetto alla baseline `1490`
+  - mantiene il workflow semplice e interpretabile
+  - non introduce la regressione ID vista con l'action set esteso
+  - evita il peggioramento OOD marcato visto con il canale LAB
+- Stato:
+  - `configs/experiments/underwater_dqn_v1.yaml` promosso a `v4.0`
+  - la run ufficiale finale va lanciata con questa configurazione
