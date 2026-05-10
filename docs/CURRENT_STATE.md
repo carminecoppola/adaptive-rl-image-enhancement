@@ -265,3 +265,27 @@ Confronto con run precedente:
 - Stato:
   - `configs/experiments/underwater_dqn_v1.yaml` promosso a `v4.0`
   - la run ufficiale finale va lanciata con questa configurazione
+
+## Run ufficiale finale v4.0
+
+- Run ID: `dqn_underwater_full_20260510_165955_1494`
+- Config: `underwater_dqn_v1 v4.0`
+- Best checkpoint:
+  - episode `1540`
+  - `mean_delta_psnr = +1.5492`
+  - `output_psnr = 18.7157`
+  - `output_ssim = 0.8275`
+  - `acceptance = true`
+- Final checkpoint:
+  - `mean_delta_psnr = +1.0060`
+  - `output_psnr = 18.1724`
+  - `output_ssim = 0.8035`
+  - `acceptance = true`
+- OOD challenging-60:
+  - `mean_delta_uciqe = -0.1707`
+  - `mean_delta_uiqm_proxy = -0.0119`
+- Lettura finale:
+  - la configurazione `v4.0` conferma il miglioramento ID rispetto all'input degradato
+  - supera Bologna in PSNR e SSIM assoluti sul best checkpoint
+  - migliora anche l'OOD rispetto alla baseline `1490` e alla run `1491`
+  - il progetto arriva quindi a una configurazione finale piu' forte e piu' coerente del punto di partenza

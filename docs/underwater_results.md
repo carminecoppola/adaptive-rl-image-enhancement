@@ -155,3 +155,27 @@ Per ogni run ufficiale:
   - e' la miglior combinazione complessiva tra performance ID, stabilita' e semplicita'
   - supera Bologna sul best checkpoint con un action space molto piu' piccolo
   - evita sia la regressione ID dell'action set esteso sia la regressione OOD del canale LAB
+
+## Run ufficiale finale v4.0 — `dqn_underwater_full_20260510_165955_1494`
+
+- Config: `configs/experiments/underwater_dqn_v1.yaml`
+- Best checkpoint:
+  - episode `1540`
+  - `mean_delta_psnr = +1.5492`
+  - `output_psnr = 18.7157`
+  - `output_ssim = 0.8275`
+  - `acceptance = true`
+- Final checkpoint:
+  - `mean_delta_psnr = +1.0060`
+  - `output_psnr = 18.1724`
+  - `output_ssim = 0.8035`
+  - `acceptance = true`
+- OOD challenging-60:
+  - `mean_delta_uciqe = -0.1707`
+  - `mean_delta_uiqm_proxy = -0.0119`
+- Confronto:
+  - migliora la baseline `1490` su OOD
+  - resta molto vicino al best ID di `1491`
+  - offre il miglior compromesso finale complessivo del branch
+- Decisione:
+  - questa e' la run ufficiale da presentazione
