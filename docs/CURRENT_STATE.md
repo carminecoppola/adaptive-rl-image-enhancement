@@ -1,6 +1,6 @@
 # Current State
 
-Data di riferimento: `2026-05-08`
+Data di riferimento: `2026-05-10`
 
 Questo file è il riferimento canonico del branch per capire da dove ripartire.
 
@@ -88,14 +88,23 @@ e deve completare:
 
 ## OOD improvements applied
 
-Data: `2026-05-09`
-Run ID: `<da compilare dopo la nuova run>`
+Data: `2026-05-10`
+Run ID: `dqn_underwater_full_20260510_095530_1489`
 
 Modifiche applicate:
 - Fix 1: feature cromatiche LAB aggiunte all'osservazione come canale globale extra
 - Fix 2: `psnr_weight` e `ssim_weight` ora sono letti dalla config YAML e passati davvero all'environment
 - Fix 3: action set canonico passato da `underwater_curated_v1` (4 azioni) a `underwater_extended_v1` (8 azioni) con `max_steps=5`
 
-Risultati ID: `<compilare da evaluation_baselines_best.json>`
-Risultati OOD: `<compilare da evaluation_ood_challenging60.json>`
-Confronto con run precedente: `<delta da compilare dopo la nuova run>`
+Risultati ID:
+- best checkpoint (`ep 380`): `mean_delta_psnr = +0.6365`, `output_psnr = 17.80`, `output_ssim = 0.803`, `acceptance = false`
+- final checkpoint: `mean_delta_psnr = +0.4076`, `output_psnr = 17.57`, `output_ssim = 0.791`, `acceptance = true`
+
+Risultati OOD:
+- `mean_delta_uciqe = -0.4531`
+- `mean_delta_uiqm_proxy = -0.0178`
+
+Confronto con run precedente:
+- rispetto alla baseline `dqn_underwater_full_20260508_184539_1488`, la run 1489 peggiora chiaramente su ID (`+0.6365` vs `+1.0910`) e su OOD (`-0.4531` vs `-0.2440`)
+- il recovery del post-processing e' stato completato senza rifare il training, correggendo il wiring degli script di evaluation verso la firma corrente di `build_env_for_image(...)`
+- questa run resta utile come evidenza di regressione e per confronto ablation, ma non va promossa a baseline ufficiale

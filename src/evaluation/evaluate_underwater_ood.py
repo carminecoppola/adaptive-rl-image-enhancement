@@ -81,6 +81,10 @@ def main() -> None:
     reward_cfg = env_all.get("reward", {})
     train_cfg = train_all.get("training", {})
     action_set_name = str(env_cfg.get("action_set", "general"))
+    include_step_channel = bool(env_cfg.get("include_step_channel", True))
+    include_lab_stats = bool(env_cfg.get("include_lab_stats", False))
+    psnr_weight = float(reward_cfg.get("psnr_weight", 1.0))
+    ssim_weight = float(reward_cfg.get("ssim_weight", 10.0))
     if not action_set_name.startswith("underwater"):
         raise ValueError(
             f"OOD challenging-60 evaluation requires an underwater action set, got: {action_set_name}"
@@ -121,11 +125,14 @@ def main() -> None:
         stop_action_bonus=float(reward_cfg.get("stop_action_bonus", 0.0)),
         terminal_reward_psnr_scale=float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
         terminal_reward_ssim_scale=float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
-        include_step_channel=bool(env_cfg.get("include_step_channel", True)),
+        include_step_channel=include_step_channel,
+        include_lab_stats=include_lab_stats,
         action_set_name=action_set_name,
         degradation_type="none",
         noise_std=0.0,
         degraded_image=sample_image,
+        psnr_weight=psnr_weight,
+        ssim_weight=ssim_weight,
     )
     action_space = cast(spaces.Discrete, sample_env.action_space)
     obs_shape = sample_env.observation_space.shape
@@ -163,11 +170,14 @@ def main() -> None:
             stop_action_bonus=float(reward_cfg.get("stop_action_bonus", 0.0)),
             terminal_reward_psnr_scale=float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
             terminal_reward_ssim_scale=float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
-            include_step_channel=bool(env_cfg.get("include_step_channel", True)),
+            include_step_channel=include_step_channel,
+            include_lab_stats=include_lab_stats,
             action_set_name=action_set_name,
             degradation_type="none",
             noise_std=0.0,
             degraded_image=image,
+            psnr_weight=psnr_weight,
+            ssim_weight=ssim_weight,
         )
         state, _ = env.reset(seed=int(train_cfg.get("seed", 42)) + 40000 + offset)
         sequence: list[int] = []

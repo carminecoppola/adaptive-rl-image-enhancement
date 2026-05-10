@@ -133,6 +133,10 @@ def main() -> None:
     else:
         raise ValueError("At least one of reward.use_psnr or reward.use_ssim must be enabled.")
     action_set_name = str(env_cfg.get("action_set", "general"))
+    include_step_channel = bool(env_cfg.get("include_step_channel", True))
+    include_lab_stats = bool(env_cfg.get("include_lab_stats", False))
+    psnr_weight = float(reward_cfg.get("psnr_weight", 1.0))
+    ssim_weight = float(reward_cfg.get("ssim_weight", 10.0))
     seed = int(train_cfg.get("seed", 42))
     collapse_threshold = float(train_cfg.get("action_collapse_threshold", 0.70))
     min_stop_rate = float(train_cfg.get("min_stop_rate", 0.10))
@@ -166,25 +170,28 @@ def main() -> None:
         key=eval_subset[0] + seed + 1234,
     )
     sample_env = build_env_for_image(
-        sample_clean,
-        max_steps,
-        image_size,
-        reward_metric,
-        float(reward_cfg.get("step_penalty", 0.01)),
-        float(reward_cfg.get("repeated_action_penalty", 0.0)),
-        float(reward_cfg.get("no_improvement_penalty", 0.0)),
-        float(reward_cfg.get("stop_bonus_scale", 0.0)),
-        float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
-        float(reward_cfg.get("early_stop_min_improvement", 0.0)),
-        float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
-        float(reward_cfg.get("stop_action_bonus", 0.0)),
-        float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
-        float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
-        bool(env_cfg.get("include_step_channel", True)),
-        action_set_name,
-        sample_degradation_type,
-        noise_std,
+        clean_image=sample_clean,
+        max_steps=max_steps,
+        image_size=image_size,
+        reward_metric=reward_metric,
+        step_penalty=float(reward_cfg.get("step_penalty", 0.01)),
+        repeated_action_penalty=float(reward_cfg.get("repeated_action_penalty", 0.0)),
+        no_improvement_penalty=float(reward_cfg.get("no_improvement_penalty", 0.0)),
+        stop_bonus_scale=float(reward_cfg.get("stop_bonus_scale", 0.0)),
+        stop_no_improvement_penalty=float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
+        early_stop_min_improvement=float(reward_cfg.get("early_stop_min_improvement", 0.0)),
+        truncate_without_stop_penalty=float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
+        stop_action_bonus=float(reward_cfg.get("stop_action_bonus", 0.0)),
+        terminal_reward_psnr_scale=float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
+        terminal_reward_ssim_scale=float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
+        include_step_channel=include_step_channel,
+        include_lab_stats=include_lab_stats,
+        action_set_name=action_set_name,
+        degradation_type=sample_degradation_type,
+        noise_std=noise_std,
         degraded_image=sample_degraded,
+        psnr_weight=psnr_weight,
+        ssim_weight=ssim_weight,
     )
 
     use_dueling_dqn = bool(checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint)))
@@ -214,25 +221,28 @@ def main() -> None:
         )
 
         env = build_env_for_image(
-            clean_image,
-            max_steps,
-            image_size,
-            reward_metric,
-            float(reward_cfg.get("step_penalty", 0.01)),
-            float(reward_cfg.get("repeated_action_penalty", 0.0)),
-            float(reward_cfg.get("no_improvement_penalty", 0.0)),
-            float(reward_cfg.get("stop_bonus_scale", 0.0)),
-            float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
-            float(reward_cfg.get("early_stop_min_improvement", 0.0)),
-            float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
-            float(reward_cfg.get("stop_action_bonus", 0.0)),
-            float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
-            float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
-            bool(env_cfg.get("include_step_channel", True)),
-            action_set_name,
-            degradation_type,
-            noise_std,
+            clean_image=clean_image,
+            max_steps=max_steps,
+            image_size=image_size,
+            reward_metric=reward_metric,
+            step_penalty=float(reward_cfg.get("step_penalty", 0.01)),
+            repeated_action_penalty=float(reward_cfg.get("repeated_action_penalty", 0.0)),
+            no_improvement_penalty=float(reward_cfg.get("no_improvement_penalty", 0.0)),
+            stop_bonus_scale=float(reward_cfg.get("stop_bonus_scale", 0.0)),
+            stop_no_improvement_penalty=float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
+            early_stop_min_improvement=float(reward_cfg.get("early_stop_min_improvement", 0.0)),
+            truncate_without_stop_penalty=float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
+            stop_action_bonus=float(reward_cfg.get("stop_action_bonus", 0.0)),
+            terminal_reward_psnr_scale=float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
+            terminal_reward_ssim_scale=float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
+            include_step_channel=include_step_channel,
+            include_lab_stats=include_lab_stats,
+            action_set_name=action_set_name,
+            degradation_type=degradation_type,
+            noise_std=noise_std,
             degraded_image=degraded_image,
+            psnr_weight=psnr_weight,
+            ssim_weight=ssim_weight,
         )
         state, _ = env.reset(seed=seed + 30000 + offset)
         clean_eval = env.clean_image
