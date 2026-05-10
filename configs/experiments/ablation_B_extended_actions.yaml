@@ -1,0 +1,116 @@
+metadata:
+  name: "ablation_B_extended_actions"
+  description: "Ablation B: underwater_extended_v1 with max_steps=5, all else matching the best A reference."
+  phase: "Phase 8 - OOD Ablation"
+  version: "1.0"
+  date_created: "2026-05-10"
+  notes:
+    - "Single-variable ablation against Ablation A reference."
+    - "Action set changes from curated_v1 to underwater_extended_v1."
+    - "max_steps stays at 5 because Ablation A passed."
+
+dataset:
+  name: "uieb"
+  description: "Underwater Image Enhancement Benchmark - paired degraded/reference images"
+  path: "${DATASET_ROOT}/UIEB"
+  image_size: 128
+  channels: 3
+  paired: true
+  train_subset_size: 5000
+  eval_subset_size: 500
+  val_subset_size: 500
+  split_seed: 42
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+
+degradation:
+  type: "none"
+  candidate_types: []
+  noise_std: 0.0
+
+environment:
+  name: "underwater_image_enhancement"
+  max_steps: 5
+  include_step_channel: true
+  action_set: "underwater_extended_v1"
+  observation_type: "image_with_step_channel"
+
+reward:
+  use_psnr: true
+  use_ssim: true
+  use_perceptual_loss: false
+  psnr_weight: 1.0
+  ssim_weight: 10.0
+  step_penalty: 0.01
+  repeated_action_penalty: 0.005
+  no_improvement_penalty: 0.02
+  stop_bonus_scale: 0.30
+  stop_no_improvement_penalty: 0.04
+  early_stop_min_improvement: 0.01
+  truncate_without_stop_penalty: 0.25
+  stop_action_bonus: 0.04
+  terminal_reward_psnr_scale: 1.5
+  terminal_reward_ssim_scale: 0.5
+
+training:
+  agent: "dqn"
+  seed: 42
+  num_episodes: 5000
+  batch_size: 32
+  learning_rate: 5.0e-5
+  gamma: 0.99
+  use_double_dqn: true
+  use_dueling_dqn: false
+  prioritized_replay: false
+  buffer_size: 50000
+  target_update_every: 5
+  eval_every: 10
+  num_eval_episodes: 50
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay: 0.9994
+  eval_pool_size: 500
+  action_collapse_threshold: 0.80
+  min_stop_rate: 0.05
+  device: "cuda"
+
+evaluation:
+  subset_size: 50
+  metric_primary: "mean_delta_psnr"
+  metric_secondary: "mean_eval_reward"
+  gate:
+    enable: true
+    require_delta_psnr_positive: true
+    require_output_psnr_ge_input: true
+    require_no_action_collapse: true
+    dominant_action_threshold: 0.45
+    require_min_stop_rate: true
+    min_stop_rate: 0.05
+    require_action_analysis_present: true
+  baselines:
+    - "input_only"
+    - "brightness_contrast_sharpen"
+    - "brightness_gamma_contrast"
+    - "denoise_sharpen"
+
+storage:
+  logs_root: "${LOGS_ROOT}"
+  checkpoint_dir: "${CHECKPOINT_ROOT}/dqn"
+
+full_training:
+  training:
+    num_episodes: 5000
+    num_eval_episodes: 50
+    eval_every: 10
+  environment:
+    max_steps: 5
+    action_set: "underwater_extended_v1"
+  dataset:
+    train_subset_size: 5000
+    eval_subset_size: 500
+    val_subset_size: 500
+  evaluation:
+    subset_size: 50
+    gate:
+      min_stop_rate: 0.05

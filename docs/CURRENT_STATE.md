@@ -169,4 +169,46 @@ Confronto con run precedente:
 - Run lanciata:
   - job Slurm: `1491`
   - experiment: `ablation_A_max_steps5`
-- I risultati di A vanno letti solo dopo il completamento della pipeline e confrontati contro la baseline `1490`
+- Risultati di A:
+  - run id: `dqn_underwater_full_20260510_111515_1491`
+  - best checkpoint (`ep 1730`):
+    - `mean_delta_psnr = +1.5622`
+    - `output_psnr = 18.7287`
+    - `output_ssim = 0.8330`
+    - `acceptance = true`
+  - OOD:
+    - `mean_delta_uciqe = -0.2600`
+    - `mean_delta_uiqm_proxy = -0.0144`
+- Confronto con baseline `1490`:
+  - ID best migliora (`+1.5622` vs `+1.5089`)
+  - `output_psnr` e `output_ssim` migliorano leggermente
+  - `mean_delta_uciqe` peggiora leggermente (`-0.2600` vs `-0.2504`)
+  - `mean_delta_uiqm_proxy` migliora (`-0.0144` vs `-0.0161`)
+- Decisione:
+  - Ablation A passa il gate del piano
+  - `max_steps=5` diventa il nuovo riferimento per l'Ablation B
+
+## Ablation B status
+
+- Config sperimentale preparata: `configs/experiments/ablation_B_extended_actions.yaml`
+- Modifica isolata rispetto al riferimento A:
+  - `action_set: underwater_curated_v1 -> underwater_extended_v1`
+  - `max_steps=5` mantenuto
+- Risultati di B:
+  - run id: `dqn_underwater_full_20260510_155811_1492`
+  - best checkpoint (`ep 1070`):
+    - `mean_delta_psnr = +0.8762`
+    - `output_psnr = 18.0427`
+    - `output_ssim = 0.8145`
+    - `acceptance = true`
+  - OOD:
+    - `mean_delta_uciqe = -0.1677`
+    - `mean_delta_uiqm_proxy = -0.0095`
+- Confronto con riferimento A (`1491`):
+  - OOD migliora nettamente
+  - ID peggiora materialmente (`+0.8762` vs `+1.5622`)
+  - il best checkpoint scende sotto il guardrail `+1.20`
+- Decisione:
+  - Ablation B non viene promossa a configurazione finale
+  - l'action set esteso resta utile come evidenza che migliora OOD, ma non passa il tradeoff ID/OOD richiesto
+  - per Ablation C il riferimento resta la configurazione di A: `max_steps=5`, `underwater_curated_v1`
