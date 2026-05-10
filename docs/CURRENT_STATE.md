@@ -108,3 +108,9 @@ Confronto con run precedente:
 - rispetto alla baseline `dqn_underwater_full_20260508_184539_1488`, la run 1489 peggiora chiaramente su ID (`+0.6365` vs `+1.0910`) e su OOD (`-0.4531` vs `-0.2440`)
 - il recovery del post-processing e' stato completato senza rifare il training, correggendo il wiring degli script di evaluation verso la firma corrente di `build_env_for_image(...)`
 - questa run resta utile come evidenza di regressione e per confronto ablation, ma non va promossa a baseline ufficiale
+
+## Reward consistency
+
+- Il reward combinato usa ora in modo coerente `psnr_weight` e `ssim_weight` in training, helper di costruzione env ed evaluation.
+- Il fallback di retrocompatibilita' resta `psnr_weight=1.0`, `ssim_weight=10.0`, che replica il comportamento storico della baseline buona.
+- Le metriche e i gate delle evaluation usano ora gli stessi pesi letti dal config effettivo della run, evitando divergenze tra training e analisi offline.

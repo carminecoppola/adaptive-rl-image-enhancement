@@ -3,6 +3,7 @@ from PIL import Image
 
 from src.envs.env import ImageEnhancementEnv
 from src.metrics import compute_psnr, compute_ssim
+from src.training.dqn_training_helpers import build_env_for_image
 
 
 def make_env() -> ImageEnhancementEnv:
@@ -117,6 +118,38 @@ def test_combined_quality_matches_legacy_formula_with_default_weights() -> None:
 
     assert np.isclose(quality, expected)
     assert np.isclose(quality, legacy)
+
+
+def test_build_env_for_image_propagates_reward_weights() -> None:
+    clean_image = Image.new("RGB", (32, 32), color=(180, 180, 180))
+    degraded_image = Image.new("RGB", (32, 32), color=(120, 140, 180))
+    env = build_env_for_image(
+        clean_image=clean_image,
+        max_steps=3,
+        image_size=(32, 32),
+        reward_metric="combined",
+        step_penalty=0.01,
+        repeated_action_penalty=0.0,
+        no_improvement_penalty=0.0,
+        stop_bonus_scale=0.0,
+        stop_no_improvement_penalty=0.0,
+        early_stop_min_improvement=0.0,
+        truncate_without_stop_penalty=0.0,
+        stop_action_bonus=0.0,
+        terminal_reward_psnr_scale=0.0,
+        terminal_reward_ssim_scale=0.0,
+        include_step_channel=True,
+        include_lab_stats=False,
+        action_set_name="underwater_curated_v1",
+        degradation_type="none",
+        noise_std=0.0,
+        degraded_image=degraded_image,
+        psnr_weight=1.0,
+        ssim_weight=10.0,
+    )
+
+    assert env.psnr_weight == 1.0
+    assert env.ssim_weight == 10.0
 
 
 def test_step_returns_valid_transition() -> None:
