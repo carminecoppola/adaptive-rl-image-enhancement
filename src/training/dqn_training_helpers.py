@@ -52,7 +52,9 @@ def choose_degradation_type(default_type: str, candidate_types: list[str], key: 
     return candidate_types[key % len(candidate_types)]
 
 
-def extract_clean_and_degraded_images(sample: tuple[Any, Any]) -> tuple[Image.Image, Image.Image | None]:
+def extract_clean_and_degraded_images(
+    sample: tuple[Any, Any],
+) -> tuple[Image.Image, Image.Image | None]:
     """
     Normalize dataset samples across synthetic and paired datasets.
 
@@ -100,7 +102,7 @@ def build_env_for_image(
 ) -> ImageEnhancementEnv:
     """
     Build environment for a single image.
-    
+
     Args:
         clean_image: Reference high-quality image.
         degraded_image: Optional precomputed degraded image.
@@ -231,8 +233,12 @@ def evaluate_on_indices(
         if final_image is None:
             raise RuntimeError("Environment returned None current_image after rollout.")
         final_eval = final_image.copy()
-        delta_psnr_values.append(compute_psnr(final_eval, clean_eval) - compute_psnr(degraded_eval, clean_eval))
-        delta_ssim_values.append(compute_ssim(final_eval, clean_eval) - compute_ssim(degraded_eval, clean_eval))
+        delta_psnr_values.append(
+            compute_psnr(final_eval, clean_eval) - compute_psnr(degraded_eval, clean_eval)
+        )
+        delta_ssim_values.append(
+            compute_ssim(final_eval, clean_eval) - compute_ssim(degraded_eval, clean_eval)
+        )
 
     agent.epsilon = old_epsilon
 

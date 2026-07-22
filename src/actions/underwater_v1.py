@@ -6,17 +6,15 @@ contrast increase, sharpening, and STOP. Additional operators remain available
 for controlled ablations and future action-set experiments.
 """
 
-import torch
-import torch.nn.functional as F
 import cv2
 import numpy as np
+import torch
 from torch import Tensor
-import torchvision.transforms as transforms
-
 
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
 
 def _tensor_to_numpy(img: Tensor) -> np.ndarray:
     """Convert from torch tensor [0,1] to numpy [0,255]."""
@@ -49,30 +47,31 @@ def _clamp_tensor(img: Tensor) -> Tensor:
 # Action 0: White Balance (Grayworld in CIELAB)
 # ============================================================================
 
+
 def white_balance_grayworld(image: Tensor) -> Tensor:
     """
     White balance using Grayworld assumption in CIELAB space.
-    
+
     Corrects color cast by assuming the average color should be gray.
     Effective for removing blue/green underwater cast.
     """
     # Convert to numpy for OpenCV processing
     img_np = _tensor_to_numpy(image)
-    
+
     # Convert BGR → LAB
     img_lab = cv2.cvtColor(img_np, cv2.COLOR_BGR2LAB).astype(np.float32)
-    
+
     # Grayworld: mean of A and B channels should be 128
     mean_a = img_lab[:, :, 1].mean()
     mean_b = img_lab[:, :, 2].mean()
-    
+
     # Adjustment
     a_shift = 128 - mean_a
     b_shift = 128 - mean_b
-    
+
     img_lab[:, :, 1] = np.clip(img_lab[:, :, 1] + a_shift, 0, 255)
     img_lab[:, :, 2] = np.clip(img_lab[:, :, 2] + b_shift, 0, 255)
-    
+
     # Convert back
     img_bgr = cv2.cvtColor(img_lab.astype(np.uint8), cv2.COLOR_LAB2BGR)
 
@@ -82,6 +81,7 @@ def white_balance_grayworld(image: Tensor) -> Tensor:
 # ============================================================================
 # Actions 1-2: Brightness Up/Down
 # ============================================================================
+
 
 def brightness_up(image: Tensor, factor: float = 1.15) -> Tensor:
     """Increase brightness (factor > 1)."""
@@ -96,6 +96,7 @@ def brightness_down(image: Tensor, factor: float = 0.85) -> Tensor:
 # ============================================================================
 # Actions 3-4: Contrast Up/Down
 # ============================================================================
+
 
 def contrast_up(image: Tensor, factor: float = 1.15) -> Tensor:
     """Increase contrast."""
@@ -113,10 +114,11 @@ def contrast_down(image: Tensor, factor: float = 0.85) -> Tensor:
 # Action 5: Red Channel Boost
 # ============================================================================
 
+
 def red_channel_boost(image: Tensor, multiplier: float = 1.5) -> Tensor:
     """
     Boost red channel specifically.
-    
+
     Underwater imaging loses red wavelength first.
     This restores red intensity.
     """
@@ -129,10 +131,11 @@ def red_channel_boost(image: Tensor, multiplier: float = 1.5) -> Tensor:
 # Actions 6-7: Gamma Up/Down
 # ============================================================================
 
+
 def gamma_up(image: Tensor, gamma: float = 0.85) -> Tensor:
     """
     Gamma correction up (brightening, 0 < gamma < 1).
-    
+
     Applies power-law transformation: I' = I^(1/gamma)
     Brightens mid-tones while preserving black/white points.
     """
@@ -142,7 +145,7 @@ def gamma_up(image: Tensor, gamma: float = 0.85) -> Tensor:
 def gamma_down(image: Tensor, gamma: float = 1.15) -> Tensor:
     """
     Gamma correction down (darkening, 1 < gamma).
-    
+
     Applies power-law transformation: I' = I^(1/gamma)
     Darkens mid-tones while preserving extremes.
     """
@@ -153,23 +156,24 @@ def gamma_down(image: Tensor, gamma: float = 1.15) -> Tensor:
 # Action 8: Gaussian Denoise
 # ============================================================================
 
+
 def gaussian_denoise(image: Tensor, radius: float = 0.7) -> Tensor:
     """
     Gaussian blur denoising.
-    
+
     Reduces sensor noise common in underwater imaging.
     Uses small radius to preserve edges.
     """
     img_np = _tensor_to_numpy(image)
-    
+
     # Gaussian blur (kernel size must be odd)
     kernel_size = int(2 * radius + 1)
     if kernel_size % 2 == 0:
         kernel_size += 1
     kernel_size = max(3, kernel_size)  # Minimum 3x3
-    
+
     img_denoised = cv2.GaussianBlur(img_np, (kernel_size, kernel_size), radius)
-    
+
     return _numpy_to_tensor(img_denoised)
 
 
@@ -177,20 +181,21 @@ def gaussian_denoise(image: Tensor, radius: float = 0.7) -> Tensor:
 # Action 9: Sharpening
 # ============================================================================
 
+
 def sharpen(image: Tensor) -> Tensor:
     """
     Sharpening filter.
-    
+
     Enhances edges to compensate for underwater blur.
     Uses unsharp masking: sharpened = image + (image - blurred).
     """
     img_np = _tensor_to_numpy(image)
-    
+
     # Unsharp masking
     blurred = cv2.GaussianBlur(img_np, (5, 5), 1.0)
     sharpened = cv2.addWeighted(img_np, 1.5, blurred, -0.5, 0)
     sharpened = np.clip(sharpened, 0, 255)
-    
+
     return _numpy_to_tensor(sharpened)
 
 
@@ -198,27 +203,24 @@ def sharpen(image: Tensor) -> Tensor:
 # Action 10: Emboss
 # ============================================================================
 
+
 def emboss(image: Tensor, strength: float = 0.05) -> Tensor:
     """
     Emboss filter.
-    
+
     Subtle texture emphasis to reveal details.
     """
     img_np = _tensor_to_numpy(image)
-    
+
     # Emboss kernel
-    kernel = np.array([
-        [-2, -1, 0],
-        [-1,  1, 1],
-        [ 0,  1, 2]
-    ], dtype=np.float32) / 8.0
-    
+    kernel = np.array([[-2, -1, 0], [-1, 1, 1], [0, 1, 2]], dtype=np.float32) / 8.0
+
     embossed = cv2.filter2D(img_np, -1, kernel)
-    
+
     # Blend with original to avoid over-processing
     result = (1 - strength) * img_np + strength * embossed
     result = np.clip(result, 0, 255)
-    
+
     return _numpy_to_tensor(result)
 
 
@@ -226,22 +228,23 @@ def emboss(image: Tensor, strength: float = 0.05) -> Tensor:
 # Action 11: Histogram Equalization (Global)
 # ============================================================================
 
+
 def histogram_eq(image: Tensor) -> Tensor:
     """
     Global histogram equalization.
-    
+
     Stretches intensity values across full range.
     Can cause over-enhancement; use CLAHE for better results.
     """
     img_np = _tensor_to_numpy(image)
-    
+
     # Convert to LAB, equalize L channel only
     img_lab = cv2.cvtColor(img_np, cv2.COLOR_BGR2LAB)
     l_channel = img_lab[:, :, 0]
-    
+
     # Equalize
     l_eq = cv2.equalizeHist(l_channel)
-    
+
     # Replace
     img_lab[:, :, 0] = l_eq
     img_bgr = cv2.cvtColor(img_lab, cv2.COLOR_LAB2BGR)
@@ -253,24 +256,25 @@ def histogram_eq(image: Tensor) -> Tensor:
 # Action 12: CLAHE (Contrast Limited Adaptive Histogram Equalization)
 # ============================================================================
 
+
 def clahe(image: Tensor, clip_limit: float = 2.0, grid_size: int = 8) -> Tensor:
     """
     Contrast Limited Adaptive Histogram Equalization.
-    
+
     Applies histogram equalization locally (not globally).
     Avoids over-enhancement of noisy regions.
     Very effective for underwater images.
     """
     img_np = _tensor_to_numpy(image)
-    
+
     # Convert to LAB, apply CLAHE to L channel
     img_lab = cv2.cvtColor(img_np, cv2.COLOR_BGR2LAB)
     l_channel = img_lab[:, :, 0]
-    
+
     # Create CLAHE object
     clahe_obj = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(grid_size, grid_size))
     l_clahe = clahe_obj.apply(l_channel)
-    
+
     # Replace
     img_lab[:, :, 0] = l_clahe
     img_bgr = cv2.cvtColor(img_lab, cv2.COLOR_LAB2BGR)
@@ -282,38 +286,38 @@ def clahe(image: Tensor, clip_limit: float = 2.0, grid_size: int = 8) -> Tensor:
 # Action 13: Dark Channel Prior (DCP) Dehazing
 # ============================================================================
 
+
 def dark_channel_prior(image: Tensor, window_size: int = 15, weight: float = 0.95) -> Tensor:
     """
     Dark Channel Prior dehazing.
-    
+
     Physics-based method for haze/backscatter removal.
     Assumes at least one color channel has low intensity in some patches.
-    
+
     Reference: He et al. "Single Image Haze Removal Using Dark Channel Prior"
     """
     img_np = _tensor_to_numpy(image)
-    
+
     # Compute dark channel
-    if img_np.ndim == 3 and img_np.shape[2] == 3:
-        dark_channel = np.min(img_np, axis=2)
-    else:
-        dark_channel = img_np
-    
+    dark_channel = np.min(img_np, axis=2) if img_np.ndim == 3 and img_np.shape[2] == 3 else img_np
+
     # Morphological closing to get transmission estimate
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (window_size, window_size))
     dark_channel_filtered = cv2.morphologyEx(dark_channel, cv2.MORPH_CLOSE, kernel)
-    
+
     # Transmission map (0 = haze, 1 = clear)
     atmospheric_light = float(np.percentile(dark_channel_filtered, 95))
     atmospheric_light = max(atmospheric_light, 1.0)
     transmission = 1 - weight * (dark_channel_filtered.astype(np.float32) / atmospheric_light)
     transmission = np.clip(transmission, 0.1, 1.0)  # Avoid division by zero
-    
+
     # Dehaze each channel
     result = np.zeros_like(img_np, dtype=np.float32)
     for c in range(3):
-        result[:, :, c] = (img_np[:, :, c].astype(np.float32) - atmospheric_light) / transmission + atmospheric_light
-    
+        result[:, :, c] = (
+            img_np[:, :, c].astype(np.float32) - atmospheric_light
+        ) / transmission + atmospheric_light
+
     result = np.clip(result, 0, 255)
     return _numpy_to_tensor(result.astype(np.uint8))
 
@@ -322,10 +326,11 @@ def dark_channel_prior(image: Tensor, window_size: int = 15, weight: float = 0.9
 # Action 19: STOP (No-op, terminates episode)
 # ============================================================================
 
+
 def stop(image: Tensor) -> Tensor:
     """
     STOP action: terminate episode without modification.
-    
+
     Returns image unchanged. Used by agent to end enhancement sequence.
     """
     return image.clone()
@@ -389,6 +394,8 @@ EXTENDED_ACTION_DESCRIPTIONS = {
     6: "Sharpen — blur da scattering",
     7: "STOP (terminate)",
 }
+
+
 def apply_action_curated(image: Tensor, action_id: int) -> Tensor:
     """
     Apply action by ID for the curated underwater action set.

@@ -20,6 +20,7 @@ class DQNAgent:
     from evaluation (target network). Set it to ``False`` to recover the
     standard DQN target while preserving the same training interface.
     """
+
     def __init__(
         self,
         num_actions: int,

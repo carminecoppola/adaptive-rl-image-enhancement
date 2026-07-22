@@ -4,11 +4,11 @@ import os
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import torch
 from gymnasium import spaces
-from typing import cast
 
 # Allow direct execution (python src/evaluation/evaluation_dqn_baselines.py) by adding
 # project root to sys.path for absolute imports from `src`.
@@ -18,26 +18,52 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.agents import DQNAgent
 from src.data import get_dataset_name, get_effective_image_size, load_train_dataset
-from src.evaluation.run_context import load_run_config_bundle
-from src.metrics import compute_psnr, compute_ssim
 from src.evaluation.baselines import BASELINE_POLICIES, evaluate_baseline_policy
 from src.evaluation.eval_types import AcceptanceChecks, PolicyMetrics, PolicyRow
+from src.evaluation.run_context import load_run_config_bundle
+from src.metrics import compute_psnr, compute_ssim
 from src.training.dqn_training_helpers import (
     build_env_for_image,
     choose_degradation_type,
     extract_clean_and_degraded_images,
 )
-from src.utils import sample_indices, build_train_eval_indices, apply_subset_limits
+from src.utils import apply_subset_limits, build_train_eval_indices, sample_indices
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate DQN against classical baselines on fixed eval split.")
-    parser.add_argument("--checkpoint", type=str, default="", help="Path to checkpoint (defaults to latest best).")
-    parser.add_argument("--num-images", type=int, default=50, help="Number of eval images sampled from checkpoint eval split.")
-    parser.add_argument("--output-name", type=str, default="evaluation_baselines.json", help="Output filename under run log dir.")
-    parser.add_argument("--action-analysis-file", type=str, default="action_analysis.json", help="Action analysis file name under run log dir.")
-    parser.add_argument("--degradation-type", type=str, default="", help="Override degradation type (e.g. gaussian_noise, combined).")
-    parser.add_argument("--noise-std", type=float, default=-1.0, help="Override degradation noise std.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate DQN against classical baselines on fixed eval split."
+    )
+    parser.add_argument(
+        "--checkpoint", type=str, default="", help="Path to checkpoint (defaults to latest best)."
+    )
+    parser.add_argument(
+        "--num-images",
+        type=int,
+        default=50,
+        help="Number of eval images sampled from checkpoint eval split.",
+    )
+    parser.add_argument(
+        "--output-name",
+        type=str,
+        default="evaluation_baselines.json",
+        help="Output filename under run log dir.",
+    )
+    parser.add_argument(
+        "--action-analysis-file",
+        type=str,
+        default="action_analysis.json",
+        help="Action analysis file name under run log dir.",
+    )
+    parser.add_argument(
+        "--degradation-type",
+        type=str,
+        default="",
+        help="Override degradation type (e.g. gaussian_noise, combined).",
+    )
+    parser.add_argument(
+        "--noise-std", type=float, default=-1.0, help="Override degradation noise std."
+    )
     return parser.parse_args()
 
 
@@ -63,7 +89,7 @@ def infer_use_dueling_from_checkpoint(checkpoint: dict) -> bool:
     state_dict = checkpoint.get("policy_net_state_dict", {})
     if not isinstance(state_dict, dict):
         return False
-    return any(k.startswith("value_head.") or k.startswith("advantage_head.") for k in state_dict.keys())
+    return any(k.startswith("value_head.") or k.startswith("advantage_head.") for k in state_dict)
 
 
 def aggregate_metrics(rows: list[PolicyRow]) -> PolicyMetrics:
@@ -101,7 +127,6 @@ def main() -> None:
     checkpoint_roots = [checkpoint_root]
     if local_checkpoint_root != checkpoint_root:
         checkpoint_roots.append(local_checkpoint_root)
-    logs_root = Path(os.getenv("LOGS_ROOT", "logs"))
     checkpoint_path = resolve_checkpoint(args.checkpoint, checkpoint_roots)
 
     dataset_root = os.getenv("DATASET_ROOT")
@@ -124,7 +149,9 @@ def main() -> None:
     if args.degradation_type:
         default_degradation_type = args.degradation_type
         candidate_degradation_types = [args.degradation_type]
-    noise_std = float(args.noise_std if args.noise_std >= 0.0 else degradation_cfg.get("noise_std", 0.1))
+    noise_std = float(
+        args.noise_std if args.noise_std >= 0.0 else degradation_cfg.get("noise_std", 0.1)
+    )
 
     max_steps = int(env_cfg.get("max_steps", 5))
     dataset_image_size = get_effective_image_size(dataset_core_cfg)
@@ -202,7 +229,9 @@ def main() -> None:
         ssim_weight=ssim_weight,
     )
 
-    use_dueling_dqn = bool(checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint)))
+    use_dueling_dqn = bool(
+        checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint))
+    )
     action_space = cast(spaces.Discrete, sample_env.action_space)
     obs_shape = sample_env.observation_space.shape
     if obs_shape is None:
@@ -239,7 +268,9 @@ def main() -> None:
             stop_bonus_scale=float(reward_cfg.get("stop_bonus_scale", 0.0)),
             stop_no_improvement_penalty=float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
             early_stop_min_improvement=float(reward_cfg.get("early_stop_min_improvement", 0.0)),
-            truncate_without_stop_penalty=float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
+            truncate_without_stop_penalty=float(
+                reward_cfg.get("truncate_without_stop_penalty", 0.0)
+            ),
             stop_action_bonus=float(reward_cfg.get("stop_action_bonus", 0.0)),
             terminal_reward_psnr_scale=float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
             terminal_reward_ssim_scale=float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
@@ -278,10 +309,10 @@ def main() -> None:
         per_policy_rows["dqn"].append(
             PolicyRow(
                 {
-                "psnr_enhanced": psnr_dqn,
-                "ssim_enhanced": ssim_dqn,
-                "delta_psnr": psnr_dqn - psnr_degraded,
-                "delta_ssim": ssim_dqn - ssim_degraded,
+                    "psnr_enhanced": psnr_dqn,
+                    "ssim_enhanced": ssim_dqn,
+                    "delta_psnr": psnr_dqn - psnr_degraded,
+                    "delta_ssim": ssim_dqn - ssim_degraded,
                 }
             )
         )
@@ -296,15 +327,17 @@ def main() -> None:
             per_policy_rows[baseline_name].append(
                 PolicyRow(
                     {
-                    "psnr_enhanced": metrics["psnr_enhanced"],
-                    "ssim_enhanced": metrics["ssim_enhanced"],
-                    "delta_psnr": metrics["delta_psnr"],
-                    "delta_ssim": metrics["delta_ssim"],
+                        "psnr_enhanced": metrics["psnr_enhanced"],
+                        "ssim_enhanced": metrics["ssim_enhanced"],
+                        "delta_psnr": metrics["delta_psnr"],
+                        "delta_ssim": metrics["delta_ssim"],
                     }
                 )
             )
 
-    aggregated: dict[str, PolicyMetrics] = {name: aggregate_metrics(rows) for name, rows in per_policy_rows.items()}
+    aggregated: dict[str, PolicyMetrics] = {
+        name: aggregate_metrics(rows) for name, rows in per_policy_rows.items()
+    }
     dqn_metrics = aggregated.get("dqn")
     input_only_metrics = aggregated.get("input_only")
     if dqn_metrics is None or input_only_metrics is None:
@@ -326,18 +359,18 @@ def main() -> None:
     dominant_action_share = None
     avg_episode_length = None
     if action_analysis_file.exists():
-        with open(action_analysis_file, "r") as f:
+        with open(action_analysis_file) as f:
             action_analysis = json.load(f)
         stop_rate = float(action_analysis.get("stop_rate", 0.0))
         dominant_action_share = float(action_analysis.get("dominant_action_share", 1.0))
         episode_length = action_analysis.get("episode_length", {})
-        avg_episode_length = float(episode_length.get("avg", 0.0)) if isinstance(episode_length, dict) else None
+        avg_episode_length = (
+            float(episode_length.get("avg", 0.0)) if isinstance(episode_length, dict) else None
+        )
         acceptance_checks["dominant_action_share_ok"] = bool(
             dominant_action_share <= collapse_threshold
         )
-        acceptance_checks["stop_rate_ok"] = bool(
-            stop_rate >= min_stop_rate
-        )
+        acceptance_checks["stop_rate_ok"] = bool(stop_rate >= min_stop_rate)
         acceptance_checks["action_analysis_available"] = True
 
     acceptance_passed = all(bool(v) for v in acceptance_checks.values())
@@ -350,7 +383,9 @@ def main() -> None:
     print(f"Checkpoint: {checkpoint_path}")
     print(f"Eval subset size: {len(eval_subset)}")
 
-    header = f"{'Policy':30s} {'PSNR(mean±std)':22s} {'SSIM(mean±std)':22s} {'ΔPSNR':8s} {'ΔSSIM':8s}"
+    header = (
+        f"{'Policy':30s} {'PSNR(mean±std)':22s} {'SSIM(mean±std)':22s} {'ΔPSNR':8s} {'ΔSSIM':8s}"
+    )
     print("\n" + header)
     print("-" * len(header))
 

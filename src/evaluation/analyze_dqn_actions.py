@@ -4,11 +4,10 @@ import os
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+from typing import cast
 
-import numpy as np
 import torch
 from gymnasium import spaces
-from typing import cast
 
 # Allow direct execution (python src/evaluation/analyze_dqn_actions.py) by adding
 # the project root to sys.path for absolute imports from `src`.
@@ -27,16 +26,40 @@ from src.training.dqn_training_helpers import (
     choose_degradation_type,
     extract_clean_and_degraded_images,
 )
-from src.utils import sample_indices, build_train_eval_indices, apply_subset_limits
+from src.utils import apply_subset_limits, build_train_eval_indices, sample_indices
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Analyze DQN action behavior on fixed eval subset.")
-    parser.add_argument("--checkpoint", type=str, default="", help="Path to checkpoint (defaults to latest run best checkpoint).")
-    parser.add_argument("--num-images", type=int, default=50, help="Number of eval images sampled from fixed eval split.")
-    parser.add_argument("--output-name", type=str, default="action_analysis.json", help="Output filename under run log dir.")
-    parser.add_argument("--degradation-type", type=str, default="", help="Override degradation type (e.g. gaussian_noise, combined).")
-    parser.add_argument("--noise-std", type=float, default=-1.0, help="Override degradation noise std.")
+    parser = argparse.ArgumentParser(
+        description="Analyze DQN action behavior on fixed eval subset."
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="",
+        help="Path to checkpoint (defaults to latest run best checkpoint).",
+    )
+    parser.add_argument(
+        "--num-images",
+        type=int,
+        default=50,
+        help="Number of eval images sampled from fixed eval split.",
+    )
+    parser.add_argument(
+        "--output-name",
+        type=str,
+        default="action_analysis.json",
+        help="Output filename under run log dir.",
+    )
+    parser.add_argument(
+        "--degradation-type",
+        type=str,
+        default="",
+        help="Override degradation type (e.g. gaussian_noise, combined).",
+    )
+    parser.add_argument(
+        "--noise-std", type=float, default=-1.0, help="Override degradation noise std."
+    )
     return parser.parse_args()
 
 
@@ -62,7 +85,7 @@ def infer_use_dueling_from_checkpoint(checkpoint: dict) -> bool:
     state_dict = checkpoint.get("policy_net_state_dict", {})
     if not isinstance(state_dict, dict):
         return False
-    return any(k.startswith("value_head.") or k.startswith("advantage_head.") for k in state_dict.keys())
+    return any(k.startswith("value_head.") or k.startswith("advantage_head.") for k in state_dict)
 
 
 def main() -> None:
@@ -73,7 +96,6 @@ def main() -> None:
     checkpoint_roots = [checkpoint_root]
     if local_checkpoint_root != checkpoint_root:
         checkpoint_roots.append(local_checkpoint_root)
-    logs_root = Path(os.getenv("LOGS_ROOT", "logs"))
     checkpoint_path = resolve_checkpoint(args.checkpoint, checkpoint_roots)
 
     dataset_root = os.getenv("DATASET_ROOT")
@@ -96,7 +118,9 @@ def main() -> None:
     if args.degradation_type:
         default_degradation_type = args.degradation_type
         candidate_degradation_types = [args.degradation_type]
-    noise_std = float(args.noise_std if args.noise_std >= 0.0 else degradation_cfg.get("noise_std", 0.1))
+    noise_std = float(
+        args.noise_std if args.noise_std >= 0.0 else degradation_cfg.get("noise_std", 0.1)
+    )
 
     max_steps = int(env_cfg.get("max_steps", 5))
     dataset_image_size = get_effective_image_size(dataset_core_cfg)
@@ -172,7 +196,9 @@ def main() -> None:
         psnr_weight=psnr_weight,
         ssim_weight=ssim_weight,
     )
-    use_dueling_dqn = bool(checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint)))
+    use_dueling_dqn = bool(
+        checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint))
+    )
     action_space = cast(spaces.Discrete, sample_env.action_space)
     obs_shape = sample_env.observation_space.shape
     if obs_shape is None:
@@ -213,7 +239,9 @@ def main() -> None:
             stop_bonus_scale=float(reward_cfg.get("stop_bonus_scale", 0.0)),
             stop_no_improvement_penalty=float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
             early_stop_min_improvement=float(reward_cfg.get("early_stop_min_improvement", 0.0)),
-            truncate_without_stop_penalty=float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
+            truncate_without_stop_penalty=float(
+                reward_cfg.get("truncate_without_stop_penalty", 0.0)
+            ),
             stop_action_bonus=float(reward_cfg.get("stop_action_bonus", 0.0)),
             terminal_reward_psnr_scale=float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
             terminal_reward_ssim_scale=float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),
@@ -251,7 +279,9 @@ def main() -> None:
 
         final_image = env.current_image
         if final_image is None:
-            raise RuntimeError("Environment returned None current_image during action analysis rollout.")
+            raise RuntimeError(
+                "Environment returned None current_image during action analysis rollout."
+            )
         enhanced_eval = final_image.copy()
         psnr_out = compute_psnr(enhanced_eval, clean_eval)
         ssim_out = compute_ssim(enhanced_eval, clean_eval)
@@ -260,16 +290,16 @@ def main() -> None:
         per_sample.append(
             SampleActionRecord(
                 {
-                "sample_index": int(idx),
-                "degradation_type": degradation_type,
-                "sequence": sequence,
-                "episode_length": int(len(sequence)),
-                "input_psnr": float(psnr_in),
-                "output_psnr": float(psnr_out),
-                "delta_psnr": float(psnr_out - psnr_in),
-                "input_ssim": float(ssim_in),
-                "output_ssim": float(ssim_out),
-                "delta_ssim": float(ssim_out - ssim_in),
+                    "sample_index": int(idx),
+                    "degradation_type": degradation_type,
+                    "sequence": sequence,
+                    "episode_length": int(len(sequence)),
+                    "input_psnr": float(psnr_in),
+                    "output_psnr": float(psnr_out),
+                    "delta_psnr": float(psnr_out - psnr_in),
+                    "input_ssim": float(ssim_in),
+                    "output_ssim": float(ssim_out),
+                    "delta_ssim": float(ssim_out - ssim_in),
                 }
             )
         )
@@ -321,12 +351,10 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / args.output_name
     top_sequences = [
-        {"sequence": list(seq), "count": int(cnt)}
-        for seq, cnt in sequence_counter.most_common(10)
+        {"sequence": list(seq), "count": int(cnt)} for seq, cnt in sequence_counter.most_common(10)
     ]
     position_counts = {
-        str(step): dict(counter)
-        for step, counter in sorted(position_counter.items())
+        str(step): dict(counter) for step, counter in sorted(position_counter.items())
     }
     best_samples = sorted(per_sample, key=lambda x: x["delta_psnr"], reverse=True)[:5]
     worst_samples = sorted(per_sample, key=lambda x: x["delta_psnr"])[:5]

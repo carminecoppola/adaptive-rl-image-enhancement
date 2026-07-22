@@ -46,7 +46,7 @@ class ReplayBuffer:
             )
 
         batch = random.sample(self.buffer, batch_size)
-        states, actions, rewards, next_states, dones = zip(*batch)
+        states, actions, rewards, next_states, dones = zip(*batch, strict=True)
 
         states_tensor = torch.as_tensor(np.asarray(states), dtype=torch.float32, device=device)
         next_states_tensor = torch.as_tensor(

@@ -79,13 +79,13 @@ def test_ddqn_vs_dqn_both_work() -> None:
         action = i % 4  # cycle through canonical curated actions
         reward = float(i % 3)  # vary rewards
         next_state = make_state()
-        done = (i % 10 == 9)  # random done flags
+        done = i % 10 == 9  # random done flags
         buffer.push(state, action, reward, next_state, done)
 
     # Both agents should train without error
     loss_ddqn = agent_ddqn.optimize_model(buffer)
     loss_dqn = agent_dqn.optimize_model(buffer)
-    
+
     assert loss_ddqn is not None, "DDQN loss should be computed"
     assert loss_dqn is not None, "DQN loss should be computed"
     assert isinstance(loss_ddqn, float), "DDQN loss should be float"
@@ -109,7 +109,7 @@ def test_ddqn_gradient_clipping() -> None:
     # Optimization should handle large gradients via clipping
     loss = agent.optimize_model(buffer)
     assert loss is not None and isinstance(loss, float)
-    
+
     # Verify gradients are finite (not NaN or Inf)
     for param in agent.policy_net.parameters():
         if param.grad is not None:
@@ -152,5 +152,7 @@ def test_target_network_update() -> None:
 
     agent.update_target_network()
 
-    for target_param, policy_param in zip(agent.target_net.parameters(), agent.policy_net.parameters()):
+    for target_param, policy_param in zip(
+        agent.target_net.parameters(), agent.policy_net.parameters(), strict=True
+    ):
         assert torch.allclose(target_param, policy_param, atol=1e-6)

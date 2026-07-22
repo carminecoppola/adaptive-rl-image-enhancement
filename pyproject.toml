@@ -11,6 +11,14 @@ extend-exclude = ["*.ipynb"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+"src/evaluation/analyze_dqn_actions.py" = ["E402"]
+"src/evaluation/evaluate_underwater_ood.py" = ["E402"]
+"src/evaluation/evaluation_dqn_baselines.py" = ["E402"]
+"src/evaluation/generate_underwater_report.py" = ["E402"]
+"src/training/train.py" = ["E402"]
+"src/training/dqn_run_setup.py" = ["SIM115"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

@@ -17,7 +17,7 @@ def compute_uciqe(image: Image.Image) -> float:
     a_channel = lab[:, :, 1] - 128.0
     b_channel = lab[:, :, 2] - 128.0
 
-    chroma = np.sqrt(a_channel ** 2 + b_channel ** 2)
+    chroma = np.sqrt(a_channel**2 + b_channel**2)
     chroma_std = float(np.std(chroma))
     luminance_contrast = float(np.percentile(l_channel, 99) - np.percentile(l_channel, 1))
 
@@ -38,7 +38,9 @@ def compute_uiqm_proxy(image: Image.Image) -> float:
 
     rg = rgb[:, :, 0] - rgb[:, :, 1]
     yb = 0.5 * (rgb[:, :, 0] + rgb[:, :, 1]) - rgb[:, :, 2]
-    colorfulness = float(np.sqrt(np.var(rg) + np.var(yb)) + 0.3 * np.sqrt(np.mean(rg) ** 2 + np.mean(yb) ** 2))
+    colorfulness = float(
+        np.sqrt(np.var(rg) + np.var(yb)) + 0.3 * np.sqrt(np.mean(rg) ** 2 + np.mean(yb) ** 2)
+    )
 
     gray = cv2.cvtColor((rgb * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY).astype(np.float32) / 255.0
     sharpness = float(cv2.Laplacian(gray, cv2.CV_32F).var())

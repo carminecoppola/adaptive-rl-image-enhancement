@@ -3,13 +3,11 @@ PSNR metric.
 """
 
 import math
-from typing import Union
 
 import numpy as np
 from PIL import Image
 
-
-ImageLike = Union[Image.Image, np.ndarray]
+ImageLike = Image.Image | np.ndarray
 
 
 def image_to_float_array(image: ImageLike) -> np.ndarray:

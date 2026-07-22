@@ -15,21 +15,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.agents import DQNAgent, ReplayBuffer
 from src.actions import get_stop_action_id
+from src.agents import DQNAgent, ReplayBuffer
 from src.data import get_dataset_name, get_effective_image_size, load_train_dataset
 from src.training.dqn_artifacts import (
     build_checkpoint_payload,
     write_final_artifacts,
-)
-from src.training.dqn_training_helpers import (
-    build_env_for_image,
-    extract_clean_and_degraded_images,
-    choose_degradation_type,
-    compute_action_entropy,
-    compute_action_repeat_ratio,
-    evaluate_on_indices,
-    set_global_seed,
 )
 from src.training.dqn_run_setup import create_debug_writer, create_run_paths
 from src.training.dqn_tracking import (
@@ -38,8 +29,17 @@ from src.training.dqn_tracking import (
     print_episode_log,
     print_eval_log,
 )
+from src.training.dqn_training_helpers import (
+    build_env_for_image,
+    choose_degradation_type,
+    compute_action_entropy,
+    compute_action_repeat_ratio,
+    evaluate_on_indices,
+    extract_clean_and_degraded_images,
+    set_global_seed,
+)
 from src.training.dqn_types import EpisodeSummaryRow, EvalHistoryRow, ResolvedConfig, RunMeta
-from src.utils import load_config, build_train_eval_indices, sample_indices, apply_subset_limits
+from src.utils import apply_subset_limits, build_train_eval_indices, load_config, sample_indices
 
 
 def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -72,7 +72,9 @@ def train() -> None:
     }
 
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Train the canonical DDQN agent for underwater image enhancement.")
+    parser = argparse.ArgumentParser(
+        description="Train the canonical DDQN agent for underwater image enhancement."
+    )
     parser.add_argument(
         "--experiment",
         type=str,
@@ -118,9 +120,7 @@ def train() -> None:
             )
         phase_override = experiment_config.get(args.phase)
         if not isinstance(phase_override, dict):
-            raise KeyError(
-                f"Phase override '{args.phase}' not found in {experiment_path}."
-            )
+            raise KeyError(f"Phase override '{args.phase}' not found in {experiment_path}.")
 
         dataset_config = deep_merge_dicts(
             dataset_config,
@@ -189,10 +189,20 @@ def train() -> None:
     use_double_dqn = bool(training_config.get("use_double_dqn", True))
     use_dueling_dqn = bool(training_config.get("use_dueling_dqn", False))
     lr = float(training_config.get("learning_rate", 1e-4))
-    buffer_size = int(training_config.get("buffer_size", training_config.get("replay_buffer_size", 50_000)))
-    target_update_every = int(training_config.get("target_update_every", training_config.get("target_update_frequency", 5)))
-    eval_every = int(training_config.get("eval_every", training_config.get("checkpoint_frequency", 10)))
-    num_eval_episodes = int(training_config.get("num_eval_episodes", evaluation_config.get("subset_size", 20)))
+    buffer_size = int(
+        training_config.get("buffer_size", training_config.get("replay_buffer_size", 50_000))
+    )
+    target_update_every = int(
+        training_config.get(
+            "target_update_every", training_config.get("target_update_frequency", 5)
+        )
+    )
+    eval_every = int(
+        training_config.get("eval_every", training_config.get("checkpoint_frequency", 10))
+    )
+    num_eval_episodes = int(
+        training_config.get("num_eval_episodes", evaluation_config.get("subset_size", 20))
+    )
     epsilon_start = float(training_config.get("epsilon_start", 1.0))
     epsilon_end = float(training_config.get("epsilon_end", 0.05))
     epsilon_decay = float(training_config.get("epsilon_decay", 0.995))
@@ -224,7 +234,9 @@ def train() -> None:
         seed=seed + 20_240,
     )
     if not eval_tracking_subset:
-        raise RuntimeError("Empty eval_tracking_subset: check eval indices and evaluation subset size.")
+        raise RuntimeError(
+            "Empty eval_tracking_subset: check eval indices and evaluation subset size."
+        )
 
     sample_degradation_type = choose_degradation_type(
         default_type=default_degradation_type,
@@ -233,7 +245,9 @@ def train() -> None:
     )
     if not train_indices:
         raise RuntimeError("Empty train_indices: check eval_pool_size/dataset split configuration.")
-    sample_clean_image, sample_degraded_image = extract_clean_and_degraded_images(train_dataset[train_indices[0]])
+    sample_clean_image, sample_degraded_image = extract_clean_and_degraded_images(
+        train_dataset[train_indices[0]]
+    )
     sample_env = build_env_for_image(
         clean_image=sample_clean_image,
         max_steps=max_steps,
@@ -294,9 +308,7 @@ def train() -> None:
     if torch.cuda.is_available():
         print(f"[DEVICE] CUDA device name: {torch.cuda.get_device_name(0)}")
 
-    print(
-        f"[RUN] run_id={run_id} | logs={run_log_dir} | checkpoints={run_ckpt_dir}"
-    )
+    print(f"[RUN] run_id={run_id} | logs={run_log_dir} | checkpoints={run_ckpt_dir}")
     print(
         f"[DATASET] {dataset_name} train_size={len(train_dataset)} "
         f"train_pool={len(train_indices)} eval_pool={len(eval_indices)} "
@@ -334,7 +346,7 @@ def train() -> None:
         )
 
         clean_image, degraded_image = extract_clean_and_degraded_images(train_dataset[image_idx])
-        
+
         env = build_env_for_image(
             clean_image=clean_image,
             max_steps=max_steps,
@@ -386,9 +398,13 @@ def train() -> None:
                         "delta_quality": info.get("delta_quality"),
                         "step_penalty_applied": info.get("step_penalty_applied"),
                         "repeated_penalty_applied": info.get("repeated_penalty_applied"),
-                        "no_improvement_penalty_applied": info.get("no_improvement_penalty_applied"),
+                        "no_improvement_penalty_applied": info.get(
+                            "no_improvement_penalty_applied"
+                        ),
                         "stop_bonus_applied": info.get("stop_bonus_applied"),
-                        "stop_no_improvement_penalty_applied": info.get("stop_no_improvement_penalty_applied"),
+                        "stop_no_improvement_penalty_applied": info.get(
+                            "stop_no_improvement_penalty_applied"
+                        ),
                         "previous_quality": info.get("previous_quality"),
                         "quality": info.get("quality"),
                         "psnr": info.get("psnr"),

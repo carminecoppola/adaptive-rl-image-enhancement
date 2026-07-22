@@ -13,8 +13,12 @@ from src.actions import get_num_actions
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate canonical underwater results report from run artifacts.")
-    parser.add_argument("--run-dir", required=True, help="Run log directory containing evaluation artifacts.")
+    parser = argparse.ArgumentParser(
+        description="Generate canonical underwater results report from run artifacts."
+    )
+    parser.add_argument(
+        "--run-dir", required=True, help="Run log directory containing evaluation artifacts."
+    )
     parser.add_argument(
         "--output-markdown",
         default="underwater_results.md",
@@ -29,7 +33,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_json(path: Path) -> dict:
-    with open(path, "r") as f:
+    with open(path) as f:
         return json.load(f)
 
 
@@ -94,7 +98,9 @@ def main() -> None:
         },
         "ood_challenging60": {
             "mean_delta_uciqe": safe_metric(ood_eval, "aggregated", "dqn", "mean_delta_uciqe"),
-            "mean_delta_uiqm_proxy": safe_metric(ood_eval, "aggregated", "dqn", "mean_delta_uiqm_proxy"),
+            "mean_delta_uiqm_proxy": safe_metric(
+                ood_eval, "aggregated", "dqn", "mean_delta_uiqm_proxy"
+            ),
             "num_images": ood_eval.get("num_images"),
         },
         "bologna_reference": {

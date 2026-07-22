@@ -52,9 +52,7 @@ def _discover_pairs(root: Path) -> list[UIEBPair]:
         and path.stem in reference_by_stem
     ]
     if not pairs:
-        raise FileNotFoundError(
-            f"No matching degraded/reference image pairs found under {root}"
-        )
+        raise FileNotFoundError(f"No matching degraded/reference image pairs found under {root}")
     return pairs
 
 
@@ -166,7 +164,9 @@ def load_uieb_dataset(
         empty = torch.empty((0, 3, image_size, image_size), dtype=torch.float32)
         return empty, empty.clone(), []
 
-    degraded, references, image_ids = zip(*(dataset[index] for index in range(len(dataset))))
+    degraded, references, image_ids = zip(
+        *(dataset[index] for index in range(len(dataset))), strict=True
+    )
     return torch.stack(degraded), torch.stack(references), list(image_ids)
 
 

@@ -2,32 +2,31 @@
 
 import pytest
 import torch
-from torch import Tensor
 
+from src.actions import get_num_actions, get_stop_action_id
 from src.actions.underwater_v1 import (
-    UNDERWATER_CURATED_V1_ACTIONS,
-    UNDERWATER_EXTENDED_V1_ACTIONS,
     CURATED_ACTION_NAMES,
     EXTENDED_ACTION_NAMES,
-    white_balance_grayworld,
-    brightness_up,
-    brightness_down,
-    contrast_up,
-    contrast_down,
-    red_channel_boost,
-    gamma_up,
-    gamma_down,
-    gaussian_denoise,
-    sharpen,
-    emboss,
-    histogram_eq,
-    clahe,
-    dark_channel_prior,
-    stop,
+    UNDERWATER_CURATED_V1_ACTIONS,
+    UNDERWATER_EXTENDED_V1_ACTIONS,
     apply_action_curated,
     apply_action_extended,
+    brightness_down,
+    brightness_up,
+    clahe,
+    contrast_down,
+    contrast_up,
+    dark_channel_prior,
+    emboss,
+    gamma_down,
+    gamma_up,
+    gaussian_denoise,
+    histogram_eq,
+    red_channel_boost,
+    sharpen,
+    stop,
+    white_balance_grayworld,
 )
-from src.actions import get_num_actions, get_stop_action_id
 
 
 @pytest.fixture
@@ -204,13 +203,13 @@ def test_stop_preserves(dummy_image):
 def test_curated_action_set_complete():
     """Test curated action metadata matches action registry."""
     assert len(UNDERWATER_CURATED_V1_ACTIONS) == 4
-    for action_id in UNDERWATER_CURATED_V1_ACTIONS.keys():
+    for action_id in UNDERWATER_CURATED_V1_ACTIONS:
         assert action_id in CURATED_ACTION_NAMES
 
 
 def test_apply_curated_action_by_id(dummy_image):
     """Test apply_action_curated function."""
-    for action_id in UNDERWATER_CURATED_V1_ACTIONS.keys():
+    for action_id in UNDERWATER_CURATED_V1_ACTIONS:
         result = apply_action_curated(dummy_image, action_id)
         assert result.shape == dummy_image.shape
         assert result.min() >= 0 and result.max() <= 1
@@ -219,13 +218,13 @@ def test_apply_curated_action_by_id(dummy_image):
 def test_extended_action_set_complete():
     """Test extended action metadata matches action registry."""
     assert len(UNDERWATER_EXTENDED_V1_ACTIONS) == 8
-    for action_id in UNDERWATER_EXTENDED_V1_ACTIONS.keys():
+    for action_id in UNDERWATER_EXTENDED_V1_ACTIONS:
         assert action_id in EXTENDED_ACTION_NAMES
 
 
 def test_apply_extended_action_by_id(dummy_image):
     """Test apply_action_extended function across all OOD actions."""
-    for action_id in UNDERWATER_EXTENDED_V1_ACTIONS.keys():
+    for action_id in UNDERWATER_EXTENDED_V1_ACTIONS:
         result = apply_action_extended(dummy_image, action_id)
         assert result.shape == dummy_image.shape
         assert result.min() >= 0 and result.max() <= 1

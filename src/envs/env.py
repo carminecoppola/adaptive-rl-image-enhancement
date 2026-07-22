@@ -153,7 +153,9 @@ class ImageEnhancementEnv(gym.Env):
         previous_quality = self.previous_quality
 
         if not terminated:
-            self.current_image = apply_action_to_pil(self.current_image, action, self.action_set_name)
+            self.current_image = apply_action_to_pil(
+                self.current_image, action, self.action_set_name
+            )
 
         current_quality = self._compute_quality(self.current_image)
 
@@ -184,11 +186,15 @@ class ImageEnhancementEnv(gym.Env):
             if self.terminal_reward_psnr_scale > 0.0:
                 psnr_now = compute_psnr(self.current_image, self.clean_image)
                 psnr_initial = compute_psnr(self.initial_degraded_image, self.clean_image)
-                terminal_psnr_reward_applied = self.terminal_reward_psnr_scale * (psnr_now - psnr_initial)
+                terminal_psnr_reward_applied = self.terminal_reward_psnr_scale * (
+                    psnr_now - psnr_initial
+                )
             if self.terminal_reward_ssim_scale > 0.0:
                 ssim_now = compute_ssim(self.current_image, self.clean_image)
                 ssim_initial = compute_ssim(self.initial_degraded_image, self.clean_image)
-                terminal_ssim_reward_applied = self.terminal_reward_ssim_scale * (ssim_now - ssim_initial)
+                terminal_ssim_reward_applied = self.terminal_reward_ssim_scale * (
+                    ssim_now - ssim_initial
+                )
 
         # Keep the transition-quality signal separate from behavioral shaping.
         # This decomposition is also written to ``info`` so reward failures can
@@ -303,7 +309,9 @@ class ImageEnhancementEnv(gym.Env):
             b_std = lab[:, :, 2].std() / 128.0
 
             h, w = rgb.shape[0], rgb.shape[1]
-            lab_value = float(np.clip(np.mean([l_mean, l_std, a_mean, a_std, b_mean, b_std]), 0.0, 1.0))
+            lab_value = float(
+                np.clip(np.mean([l_mean, l_std, a_mean, a_std, b_mean, b_std]), 0.0, 1.0)
+            )
             lab_plane = np.full((h, w, 1), fill_value=lab_value, dtype=np.float32)
             parts.append(lab_plane)
 

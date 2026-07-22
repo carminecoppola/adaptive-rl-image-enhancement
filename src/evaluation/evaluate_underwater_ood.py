@@ -6,12 +6,12 @@ import os
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import torch
 from gymnasium import spaces
 from PIL import Image
-from typing import cast
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -25,7 +25,9 @@ from src.training.dqn_training_helpers import build_env_for_image
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate underwater checkpoint on UIEB challenging-60 without references.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate underwater checkpoint on UIEB challenging-60 without references."
+    )
     parser.add_argument("--checkpoint", required=True, help="Path to checkpoint.")
     parser.add_argument(
         "--challenge-dir",
@@ -44,7 +46,7 @@ def infer_use_dueling_from_checkpoint(checkpoint: dict) -> bool:
     state_dict = checkpoint.get("policy_net_state_dict", {})
     if not isinstance(state_dict, dict):
         return False
-    return any(k.startswith("value_head.") or k.startswith("advantage_head.") for k in state_dict.keys())
+    return any(k.startswith("value_head.") or k.startswith("advantage_head.") for k in state_dict)
 
 
 def aggregate_rows(rows: list[dict[str, float]]) -> dict[str, float]:
@@ -94,12 +96,20 @@ def main() -> None:
     if dataset_root is None:
         raise ValueError("DATASET_ROOT is not defined in .env")
 
-    challenge_dir = Path(args.challenge_dir) if args.challenge_dir else Path(dataset_root) / "UIEB" / "challenging-60"
+    challenge_dir = (
+        Path(args.challenge_dir)
+        if args.challenge_dir
+        else Path(dataset_root) / "UIEB" / "challenging-60"
+    )
     if not challenge_dir.exists():
         raise FileNotFoundError(f"challenging-60 directory not found: {challenge_dir}")
 
     image_paths = sorted(
-        [path for path in challenge_dir.iterdir() if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}]
+        [
+            path
+            for path in challenge_dir.iterdir()
+            if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
+        ]
     )
     if not image_paths:
         raise RuntimeError(f"No challenge images found in {challenge_dir}")
@@ -107,7 +117,9 @@ def main() -> None:
     max_steps = int(env_cfg.get("max_steps", 5))
     image_size_val = int(dataset_cfg.get("dataset", {}).get("image_size", 128))
     image_size = (image_size_val, image_size_val)
-    use_dueling_dqn = bool(checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint)))
+    use_dueling_dqn = bool(
+        checkpoint.get("use_dueling_dqn", infer_use_dueling_from_checkpoint(checkpoint))
+    )
 
     sample_image = Image.open(image_paths[0]).convert("RGB")
     sample_env = build_env_for_image(
@@ -166,7 +178,9 @@ def main() -> None:
             stop_bonus_scale=float(reward_cfg.get("stop_bonus_scale", 0.0)),
             stop_no_improvement_penalty=float(reward_cfg.get("stop_no_improvement_penalty", 0.0)),
             early_stop_min_improvement=float(reward_cfg.get("early_stop_min_improvement", 0.0)),
-            truncate_without_stop_penalty=float(reward_cfg.get("truncate_without_stop_penalty", 0.0)),
+            truncate_without_stop_penalty=float(
+                reward_cfg.get("truncate_without_stop_penalty", 0.0)
+            ),
             stop_action_bonus=float(reward_cfg.get("stop_action_bonus", 0.0)),
             terminal_reward_psnr_scale=float(reward_cfg.get("terminal_reward_psnr_scale", 0.0)),
             terminal_reward_ssim_scale=float(reward_cfg.get("terminal_reward_ssim_scale", 0.0)),

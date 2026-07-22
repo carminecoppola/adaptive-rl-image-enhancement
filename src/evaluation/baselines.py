@@ -6,13 +6,12 @@ Includes two types of baselines:
 2. Method-based: Classical image enhancement algorithms (DCP, histogram equalization, etc.)
 """
 
-from PIL import Image
-import numpy as np
 import cv2
+import numpy as np
+from PIL import Image
 
 from src.actions.filters import ImageAction, apply_action
 from src.metrics import compute_psnr, compute_ssim
-
 
 BASELINE_POLICIES: dict[str, list[int]] = {
     "input_only": [
@@ -97,6 +96,7 @@ def evaluate_all_baselines(
 # Classical Method-Based Baselines
 # ============================================================================
 
+
 def identity_baseline(image: Image.Image) -> Image.Image:
     """
     Identity baseline: returns image unchanged.
@@ -113,41 +113,42 @@ def histogram_equalization_baseline(image: Image.Image) -> Image.Image:
     """
     array = np.asarray(image).astype(np.uint8)
     lab = cv2.cvtColor(array, cv2.COLOR_RGB2LAB)
-    
+
     # Apply histogram equalization to L channel
     lab[:, :, 0] = cv2.equalizeHist(lab[:, :, 0])
-    
+
     return Image.fromarray(cv2.cvtColor(lab, cv2.COLOR_LAB2RGB))
 
 
 def dark_channel_prior_baseline(image: Image.Image, window_size: int = 15) -> Image.Image:
     """
     Dark Channel Prior (DCP) baseline for generic dehazing/contrast recovery.
-    
+
     Based on the dark-channel prior literature for haze removal.
-    
+
     The dark channel represents the minimum intensity in local patches.
     In hazy images, the dark channel is bright because of airlight.
     By estimating and removing the airlight, we restore contrast.
-    
+
     Args:
         image: Input degraded image
         window_size: Size of local patches for dark channel computation
-        
+
     Returns:
         Enhanced image with restored contrast
     """
     # Convert to float [0, 1]
     img_array = np.asarray(image).astype(np.float32) / 255.0
-    
+
     # Compute dark channel: minimum intensity in each patch
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (window_size, window_size))
-    dark_channel = cv2.morphologyEx(
-        (img_array.min(axis=2, keepdims=True) * 255).astype(np.uint8),
-        cv2.MORPH_ERODE,
-        kernel
-    ).astype(np.float32) / 255.0
-    
+    dark_channel = (
+        cv2.morphologyEx(
+            (img_array.min(axis=2, keepdims=True) * 255).astype(np.uint8), cv2.MORPH_ERODE, kernel
+        ).astype(np.float32)
+        / 255.0
+    )
+
     # Estimate transmission map (how much light passes through medium)
     # transmission = 1 - omega * (dark_channel / max_value)
     omega = 0.95
@@ -156,15 +157,15 @@ def dark_channel_prior_baseline(image: Image.Image, window_size: int = 15) -> Im
         transmission = 1.0 - omega * (dark_channel / max_value)
     else:
         transmission = np.ones_like(dark_channel)
-    
+
     # Smooth transmission map for consistency
     transmission = cv2.GaussianBlur(transmission, (11, 11), 0)
     transmission = np.clip(transmission, 0.1, 1.0)  # Ensure at least some transmission
-    
+
     # Squeeze transmission to remove channel dimension
     if transmission.ndim == 3:
         transmission = transmission[:, :, 0]
-    
+
     # Estimate airlight (atmospheric light)
     if img_array.shape[0] > 0 and img_array.shape[1] > 0:
         num_pixels = int(0.1 * img_array.shape[0] * img_array.shape[1])
@@ -177,16 +178,18 @@ def dark_channel_prior_baseline(image: Image.Image, window_size: int = 15) -> Im
             airlight = img_array.mean(axis=(0, 1))
     else:
         airlight = np.array([0.5, 0.5, 0.5])
-    
+
     # Restore image: I = (I - A) / t + A
     result = np.zeros_like(img_array)
     for c in range(3):
-        result[:, :, c] = (img_array[:, :, c] - airlight[c]) / np.maximum(transmission, 0.1) + airlight[c]
-    
+        result[:, :, c] = (img_array[:, :, c] - airlight[c]) / np.maximum(
+            transmission, 0.1
+        ) + airlight[c]
+
     # Normalize and clip to valid range
     result = np.clip(result, 0.0, 1.0)
     result = (result * 255).astype(np.uint8)
-    
+
     return Image.fromarray(result, mode="RGB")
 
 
@@ -197,12 +200,12 @@ def evaluate_method_baseline(
 ) -> dict[str, float]:
     """
     Evaluate a classical method baseline.
-    
+
     Args:
         clean_image: Reference high-quality image
         degraded_image: Degraded input image
         method_name: One of "identity", "histogram", "dcp"
-        
+
     Returns:
         Dict with metrics: psnr_degraded, psnr_enhanced, delta_psnr, etc.
     """
@@ -211,19 +214,19 @@ def evaluate_method_baseline(
         "histogram": histogram_equalization_baseline,
         "dcp": dark_channel_prior_baseline,
     }
-    
+
     if method_name not in methods:
         raise ValueError(f"Unknown method: {method_name}. Supported: {list(methods.keys())}")
-    
+
     method = methods[method_name]
     enhanced_image = method(degraded_image)
-    
+
     psnr_degraded = compute_psnr(degraded_image, clean_image)
     psnr_enhanced = compute_psnr(enhanced_image, clean_image)
-    
+
     ssim_degraded = compute_ssim(degraded_image, clean_image)
     ssim_enhanced = compute_ssim(enhanced_image, clean_image)
-    
+
     return {
         "psnr_degraded": psnr_degraded,
         "psnr_enhanced": psnr_enhanced,
@@ -240,7 +243,7 @@ def evaluate_all_method_baselines(
 ) -> dict[str, dict[str, float]]:
     """
     Evaluate all classical method baselines.
-    
+
     Returns:
         Dict mapping method names to their evaluation results
     """
@@ -255,5 +258,5 @@ def evaluate_all_method_baselines(
         except Exception as e:
             print(f"Error evaluating {method_name}: {e}")
             results[method_name] = {}
-    
+
     return results

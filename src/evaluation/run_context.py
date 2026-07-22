@@ -7,7 +7,6 @@ from typing import Any
 
 from src.utils import load_config
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
