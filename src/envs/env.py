@@ -15,8 +15,13 @@ from src.metrics import compute_psnr, compute_ssim
 
 class ImageEnhancementEnv(gym.Env):
     """
-    RL environment where an agent improves a degraded image through
-    sequential image-processing actions.
+    Sequential underwater image-enhancement task.
+
+    The policy observes only the current image and optional context channels;
+    the clean/reference image is kept inside the environment exclusively for
+    reward and evaluation metrics. This separation prevents target leakage.
+    Every action is an interpretable, deterministic image-processing operator,
+    and the episode ends with STOP or the configured step limit.
     """
 
     metadata = {"render_modes": ["rgb_array"]}
@@ -109,6 +114,9 @@ class ImageEnhancementEnv(gym.Env):
     ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
 
+        # Start every episode from the untouched degraded input. Copies are
+        # important because PIL operations may otherwise leak state between
+        # episodes that reuse the same dataset sample.
         self.current_image = self.initial_degraded_image.copy()
         self.current_step = 0
         self.previous_quality = self._compute_quality(self.current_image)
@@ -138,6 +146,8 @@ class ImageEnhancementEnv(gym.Env):
 
         self.current_step += 1
 
+        # STOP is a real policy decision: it preserves the current image and
+        # triggers terminal quality terms instead of applying another filter.
         terminated = action == self.stop_action
 
         previous_quality = self.previous_quality
@@ -180,6 +190,9 @@ class ImageEnhancementEnv(gym.Env):
                 ssim_initial = compute_ssim(self.initial_degraded_image, self.clean_image)
                 terminal_ssim_reward_applied = self.terminal_reward_ssim_scale * (ssim_now - ssim_initial)
 
+        # Keep the transition-quality signal separate from behavioral shaping.
+        # This decomposition is also written to ``info`` so reward failures can
+        # be diagnosed after a run instead of inferred from one aggregate value.
         reward = (
             delta_quality
             - step_penalty_applied
@@ -236,6 +249,12 @@ class ImageEnhancementEnv(gym.Env):
         return np.asarray(self.current_image.convert("RGB"), dtype=np.uint8)
 
     def _compute_quality(self, image: Image.Image) -> float:
+        """Return the reference-based quality objective used by the reward.
+
+        In the official underwater configuration, SSIM receives a larger
+        numeric weight because its natural scale is much smaller than PSNR's.
+        Checkpoint selection still uses mean delta PSNR as the primary metric.
+        """
         if self.reward_metric == "psnr":
             return compute_psnr(image, self.clean_image)
 
@@ -250,6 +269,13 @@ class ImageEnhancementEnv(gym.Env):
         raise ValueError(f"Unsupported reward metric: {self.reward_metric}")
 
     def _image_to_observation(self, image: Image.Image) -> np.ndarray:
+        """Build an ``H x W x C`` policy observation without the reference.
+
+        The step plane tells the CNN how much of the five-action budget has
+        already been consumed. LAB statistics are optional and disabled in the
+        final v4.0 configuration after the corresponding ablation worsened OOD
+        behavior.
+        """
         array = np.asarray(image.convert("RGB"), dtype=np.float32)
         rgb = array / 255.0
         parts = [rgb]

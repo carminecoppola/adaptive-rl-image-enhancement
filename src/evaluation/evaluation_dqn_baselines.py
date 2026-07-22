@@ -67,6 +67,7 @@ def infer_use_dueling_from_checkpoint(checkpoint: dict) -> bool:
 
 
 def aggregate_metrics(rows: list[PolicyRow]) -> PolicyMetrics:
+    """Summarize per-image paired metrics without hiding run variance."""
     keys = ["psnr_enhanced", "ssim_enhanced", "delta_psnr", "delta_ssim"]
     out: dict[str, float] = {}
     for key in keys:
@@ -86,6 +87,13 @@ def aggregate_metrics(rows: list[PolicyRow]) -> PolicyMetrics:
 
 
 def main() -> None:
+    """Compare the selected DDQN checkpoint with fixed classical policies.
+
+    Every policy receives the same degraded images from the same deterministic
+    evaluation subset. The final acceptance checks combine image quality with
+    the separately generated action-analysis diagnostics, because a diverse
+    policy can still be harmful and a high-quality policy can still collapse.
+    """
     args = parse_args()
 
     checkpoint_root = Path(os.getenv("CHECKPOINT_ROOT", "checkpoints"))
@@ -158,6 +166,7 @@ def main() -> None:
             seed=seed,
         )
 
+    # Reuse a deterministic sample so repeated evaluations remain comparable.
     eval_subset = sample_indices(eval_indices, k=args.num_images, seed=seed + 1234)
     if not eval_subset:
         raise RuntimeError("Empty eval subset: check eval indices and --num-images.")
@@ -247,7 +256,7 @@ def main() -> None:
         clean_eval = env.clean_image
         degraded_eval = env.initial_degraded_image.copy()
 
-        # Run DQN policy.
+        # Run the learned policy until STOP or the environment step limit.
         current_state = state
         dqn_enhanced = degraded_eval
         for _ in range(max_steps):
@@ -277,6 +286,7 @@ def main() -> None:
             )
         )
 
+        # Fixed policies form the non-adaptive control group for the experiment.
         for baseline_name, baseline_actions in BASELINE_POLICIES.items():
             metrics = evaluate_baseline_policy(
                 clean_image=clean_eval,

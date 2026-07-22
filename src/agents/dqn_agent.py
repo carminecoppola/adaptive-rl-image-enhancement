@@ -59,6 +59,13 @@ class DQNAgent:
         self.loss_fn = nn.SmoothL1Loss()
 
     def select_action(self, state):
+        """Choose an action with the epsilon-greedy exploration strategy.
+
+        The environment exposes observations as ``H x W x C`` NumPy arrays,
+        while PyTorch convolutional layers expect ``N x C x H x W`` tensors.
+        Evaluation scripts set ``epsilon`` to zero, making this method fully
+        greedy and deterministic for a fixed model and input state.
+        """
         if random.random() < self.epsilon:
             return random.randrange(self.num_actions)
 
@@ -75,6 +82,14 @@ class DQNAgent:
         return int(torch.argmax(q_values, dim=1).item())
 
     def optimize_model(self, replay_buffer):
+        """Perform one replay-based Q-learning update.
+
+        Double DQN deliberately uses the policy network to *select* the next
+        action and the target network to *evaluate* it. Keeping those roles
+        separate reduces the optimistic value estimates produced by standard
+        DQN. Non-finite values are rejected here so one corrupted transition
+        cannot destabilize the rest of a long HPC run.
+        """
         if len(replay_buffer) < self.batch_size:
             return None
 
@@ -111,4 +126,5 @@ class DQNAgent:
         return loss.item()
 
     def update_target_network(self):
+        """Synchronize the slowly updated target with the policy network."""
         self.target_net.load_state_dict(self.policy_net.state_dict())

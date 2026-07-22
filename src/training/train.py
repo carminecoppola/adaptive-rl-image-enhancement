@@ -57,6 +57,13 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
 
 
 def train() -> None:
+    """Run the canonical underwater training and periodic evaluation workflow.
+
+    The function intentionally keeps configuration resolution, deterministic
+    splitting, interaction, optimization, checkpoint selection, and artifact
+    writing in one visible top-level flow. Lower-level operations live in the
+    ``dqn_*`` helper modules so each phase can be tested independently.
+    """
     supported_experiments = {
         "underwater_dqn_v1",
         "ablation_A_max_steps5",
@@ -126,6 +133,8 @@ def train() -> None:
         training_config_all = deep_merge_dicts(training_config_all, phase_override)
         print(f"[EXPERIMENT] Applied phase override: {args.phase}")
 
+    # Resolve configuration once and persist the same effective values with the
+    # run. This prevents evaluation from silently using newer YAML defaults.
     env_config = env_config_all.get("environment", {})
     reward_config = env_config_all.get("reward", {})
     training_config = training_config_all.get("training", {})
@@ -195,6 +204,8 @@ def train() -> None:
 
     dataset_name = get_dataset_name(dataset_core_cfg)
     train_dataset = load_train_dataset(dataset_core_cfg, dataset_root=dataset_root)
+    # The evaluation pool is deterministic and disjoint from the training pool.
+    # Checkpoint comparisons therefore see the same images throughout a run.
     train_indices, eval_indices = build_train_eval_indices(
         dataset_size=len(train_dataset),
         eval_pool_size=eval_pool_size,
@@ -309,6 +320,9 @@ def train() -> None:
 
     best_state = BestRunState(best_eval_subset=[])
 
+    # Each episode samples one paired image and creates a fresh environment.
+    # The image-level rollout is short (five steps in v4.0), but replay updates
+    # reuse transitions across many later episodes.
     for episode in range(1, num_episodes + 1):
         episode_seed = seed + episode
         episode_rng = random.Random(episode_seed)
