@@ -49,8 +49,8 @@ reports/*
 !reports/.gitkeep
 
 # Local data/work dirs (never commit datasets)
-data/
-datasets/
+/data/
+/datasets/
 logs/
 wandb/
 mlruns/

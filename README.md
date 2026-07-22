@@ -51,6 +51,7 @@ history.
 configs/experiments/     Canonical experiment configuration
 src/actions/             Deterministic enhancement operators and registries
 src/agents/              Q-network, replay buffer, and DDQN agent
+src/data/                UIEB pairing, tensor/PIL adapters, and degradations
 src/envs/                Gymnasium image-enhancement environment
 src/evaluation/          Baselines, action analysis, OOD evaluation, reports
 src/metrics/             Paired and no-reference metrics
