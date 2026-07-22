@@ -1,33 +1,53 @@
-# Underwater RL Training Guide
+# Training and Evaluation Guide
 
-## Utilizzo
+## Prepare the environment
+
+From the repository root:
 
 ```bash
-cd /home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement
+bash scripts/setup_env.sh
 source venv/bin/activate
+cp .env.example .env
+```
+
+Edit `.env` so `DATASET_ROOT`, `LOGS_ROOT`, and `CHECKPOINT_ROOT` point to
+writable locations. The canonical UIEB dataset must contain `raw`, `reference`,
+and `challenging-60` directories.
+
+## Local training
+
+```bash
+python -m src.training.train \
+  --experiment underwater_dqn_v1 \
+  --phase full_training
+```
+
+## Slurm training
+
+Submit from the repository root so Slurm can resolve the log paths:
+
+```bash
+mkdir -p logs
 sbatch scripts/train_underwater.sbatch
 ```
 
-Monitoraggio:
+The launcher derives the project root from `SLURM_SUBMIT_DIR`; it no longer
+depends on a user-specific absolute path. Override `PROJECT_ROOT` or
+`EXPERIMENT` through exported environment variables when necessary.
 
-```bash
-squeue -u ccoppola
-tail -f logs/sbatch_training_*.log
-```
+## Automated workflow
 
-## Cosa fa il launcher ufficiale
+The Slurm launcher performs:
 
-`scripts/train_underwater.sbatch` esegue automaticamente:
+1. full DDQN training;
+2. action analysis for best and final checkpoints;
+3. paired baseline evaluation for both checkpoints;
+4. OOD evaluation on `UIEB/challenging-60`;
+5. canonical Markdown and JSON report generation.
 
-1. full training con `--phase full_training`
-2. evaluation ID su best checkpoint
-3. evaluation ID su final checkpoint
-4. evaluation OOD su `UIEB/challenging-60`
-5. report canonico della run
+## Expected artifacts
 
-## Artifact attesi per la run full
-
-Nella cartella `${LOGS_ROOT}/dqn/<RUN_ID>/` devono comparire:
+`${LOGS_ROOT}/dqn/<RUN_ID>/`:
 
 - `effective_config.json`
 - `dataset_split.json`
@@ -42,37 +62,25 @@ Nella cartella `${LOGS_ROOT}/dqn/<RUN_ID>/` devono comparire:
 - `underwater_results.md`
 - `underwater_results_summary.json`
 
-Checkpoint attesi in `${CHECKPOINT_ROOT}/dqn/<RUN_ID>/`:
+`${CHECKPOINT_ROOT}/dqn/<RUN_ID>/`:
 
 - `dqn_best_policy_net.pt`
 - `dqn_final_policy_net.pt`
 
-## Esecuzione manuale
-
-Full locale:
+## Manual evaluation
 
 ```bash
-python src/training/train.py --experiment underwater_dqn_v1 --phase full_training
+python -m src.evaluation.analyze_dqn_actions \
+  --checkpoint /path/to/dqn_best_policy_net.pt \
+  --num-images 50
+
+python -m src.evaluation.evaluation_dqn_baselines \
+  --checkpoint /path/to/dqn_best_policy_net.pt \
+  --num-images 50
+
+python -m src.evaluation.evaluate_underwater_ood \
+  --checkpoint /path/to/dqn_best_policy_net.pt
 ```
 
-Evaluation manuale di un checkpoint:
-
-```bash
-python src/evaluation/analyze_dqn_actions.py --checkpoint /path/to/dqn_best_policy_net.pt --num-images 50
-python src/evaluation/evaluation_dqn_baselines.py --checkpoint /path/to/dqn_best_policy_net.pt --num-images 50
-python src/evaluation/evaluate_underwater_ood.py --checkpoint /path/to/dqn_best_policy_net.pt
-```
-
-## Configurazione canonica
-
-La sola config underwater ufficiale è:
-
-- `configs/experiments/underwater_dqn_v1.yaml`
-
-## Notebook finale
-
-Il notebook canonico da usare per l’analisi della run è:
-
-- `underwater_policy_analysis.ipynb`
-
-Il notebook deve leggere gli artifact della run, non ricostruire risultati con logiche parallele.
+The analysis notebook must consume generated run artifacts; it must not
+recompute results with a separate evaluation path.

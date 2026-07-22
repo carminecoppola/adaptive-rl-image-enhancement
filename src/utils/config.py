@@ -27,12 +27,15 @@ def load_config(config_path: str | Path) -> dict[str, Any]:
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(config_path, "r") as file:
+    with config_path.open("r", encoding="utf-8") as file:
         raw_config = file.read()
 
     expanded_config = os.path.expandvars(raw_config)
 
-    return yaml.safe_load(expanded_config)
+    config = yaml.safe_load(expanded_config)
+    if not isinstance(config, dict):
+        raise ValueError(f"Expected a YAML mapping in {config_path}")
+    return config
 
 
 def load_all_configs(config_dir: str | Path = "configs") -> dict[str, Any]:
@@ -41,7 +44,7 @@ def load_all_configs(config_dir: str | Path = "configs") -> dict[str, Any]:
     """
     config_dir = Path(config_dir)
 
-    configs = {}
+    configs: dict[str, Any] = {}
 
     for config_file in config_dir.glob("*.yaml"):
         config_name = config_file.stem

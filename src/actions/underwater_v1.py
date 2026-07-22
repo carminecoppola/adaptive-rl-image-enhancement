@@ -1,18 +1,10 @@
+"""Deterministic underwater image-enhancement operators.
+
+Each function maps a normalized ``CHW`` tensor to another normalized tensor.
+The canonical ``underwater_curated_v1`` registry exposes only white balance,
+contrast increase, sharpening, and STOP. Additional operators remain available
+for controlled ablations and future action-set experiments.
 """
-Underwater Image Enhancement Actions (v1)
-
-20 discrete enhancement operators for underwater image enhancement.
-Inspired by Bologna 2022 project.
-
-Each action is a pure function: Tensor → Tensor
-- Input: normalized tensor [0, 1]
-- Output: normalized tensor [0, 1]
-- Deterministic: same input → same output
-"""
-
-# Nota: la configurazione finale usa solo `underwater_curated_v1` (4 azioni).
-# Le funzioni non incluse nel set curato sono mantenute per documentazione
-# delle scelte di design e per estensioni future.
 
 import torch
 import torch.nn.functional as F

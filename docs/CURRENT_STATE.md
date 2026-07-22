@@ -1,55 +1,60 @@
-# Current State — Versione finale
+# Current Project State
 
-Data di riferimento: `2026-05-10`
-Branch: `feature/underwater-domain`
+Reference date: 2026-05-10
+Canonical configuration: `underwater_dqn_v1` v4.0
 
-## Configurazione finale ufficiale
+## Final configuration
 
-- Experiment: `underwater_dqn_v1 v4.0`
-- Agente: DDQN (`use_double_dqn: true`)
-- Dataset: UIEB 890 paired (raw-890 + reference-890)
-- Action set: `underwater_curated_v1` (4 azioni: white_balance, contrast_up, sharpen, stop)
-- Max steps per episodio: 5
-- Reward: combined PSNR + SSIM (`psnr_weight=1.0`, `ssim_weight=10.0`)
-- Episodi training: 5000
-- Best checkpoint: episodio 1540
+| Component | Value |
+|---|---|
+| Dataset | UIEB, 890 paired images |
+| Agent | Double DQN |
+| Observation | 128×128 RGB image + normalized step channel |
+| Actions | white balance, contrast up, sharpen, STOP |
+| Maximum episode length | 5 decisions |
+| Reward quality term | ΔPSNR + 10 × ΔSSIM |
+| Training episodes | 5,000 |
+| Best checkpoint | Episode 1,540 |
 
-## Run ufficiale finale
+## Official run
 
 Run ID: `dqn_underwater_full_20260510_165955_1494`
 
-| Metrica | Valore |
-|---------|--------|
-| mean_delta_psnr (ID) | +1.5492 dB |
-| output_psnr (ID) | 18.7157 |
-| output_ssim (ID) | 0.8275 |
-| acceptance_passed | true |
-| mean_delta_uciqe (OOD) | -0.1707 |
-| mean_delta_uiqm_proxy (OOD) | -0.0119 |
+| Metric | Best checkpoint | Final checkpoint |
+|---|---:|---:|
+| Mean in-domain ΔPSNR | **+1.5492 dB** | +1.0060 dB |
+| Output PSNR | **18.7157 dB** | 18.1724 dB |
+| Output SSIM | **0.8275** | 0.8035 |
+| Acceptance suite | Passed | Passed |
 
-## Confronto con Bologna 2022
+OOD evaluation on `challenging-60`:
 
-| | Bologna 2022 | Questo progetto |
-|---|---|---|
-| PSNR | 15.47 dB | **18.72 dB** (+3.25 dB) |
-| SSIM | 0.628 | **0.827** (+0.199) |
-| Episodi | 20.000 | **5.000** |
-| Azioni | 20 | **4** |
-| OOD testing | No | Sì |
+| Metric | Change |
+|---|---:|
+| Mean ΔUCIQE | **-0.1707** |
+| Mean ΔUIQM proxy | **-0.0119** |
 
-## Pipeline canonica
+## Interpretation
 
-1. `src/training/train.py --experiment underwater_dqn_v1 --phase full_training`
-2. `src/evaluation/analyze_dqn_actions.py`
-3. `src/evaluation/evaluation_dqn_baselines.py`
-4. `src/evaluation/evaluate_underwater_ood.py`
-5. `src/evaluation/generate_underwater_report.py`
+The final policy produces a measurable improvement on the paired in-domain
+evaluation split. The best checkpoint is materially stronger than the final
+checkpoint, so training quality is not monotonic and checkpoint tracking is
+required. Negative OOD deltas prevent a general robustness claim.
 
-Tutti e 5 i passi sono eseguiti automaticamente da `scripts/train_underwater.sbatch`.
+## Canonical workflow
 
-## Limiti documentati
+1. `python -m src.training.train --experiment underwater_dqn_v1 --phase full_training`
+2. `python -m src.evaluation.analyze_dqn_actions`
+3. `python -m src.evaluation.evaluation_dqn_baselines`
+4. `python -m src.evaluation.evaluate_underwater_ood`
+5. `python -m src.evaluation.generate_underwater_report`
 
-- OOD (challenging-60): mean_delta_uciqe leggermente negativo (-0.17).
-  Causa: distribuzione di degrado delle challenging-60 diversa da raw-890.
-  Ablation B (8 azioni) e C (LAB stats) non hanno migliorato questo limite
-  senza degradare i risultati ID.
+The Slurm entrypoint `scripts/train_underwater.sbatch` executes the full
+workflow and writes all artifacts under the run-specific log directory.
+
+## Open limitation
+
+The main unresolved issue is distribution shift between paired UIEB training
+images and `challenging-60`. The extended action-set ablation improved OOD
+metrics but lost too much paired performance; LAB statistics preserved paired
+performance but worsened OOD results.

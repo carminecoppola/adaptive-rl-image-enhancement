@@ -1,181 +1,63 @@
-# Underwater RL Results
+# Underwater Experiment Results
 
-Questo file è il riferimento canonico per i risultati underwater consolidati.
+This document is the canonical repository summary for consolidated underwater
+experiments. Per-run JSON and Markdown artifacts remain the source of truth for
+individual executions.
 
-## Stato
+## Evaluation protocol
 
-- Il workflow ufficiale è stato consolidato.
-- Le run storiche underwater restano utili come riferimento esplorativo, ma non sono considerate definitive.
-- La run di riferimento va letta dagli artifact prodotti in `${LOGS_ROOT}/dqn/<RUN_ID>/`.
+Each official run includes:
 
-## Protocollo canonico
+1. full DDQN training;
+2. action analysis for the best checkpoint;
+3. paired baseline evaluation for best and final checkpoints;
+4. no-reference OOD evaluation on `challenging-60`;
+5. a generated human-readable and machine-readable report.
 
-Una run consolidata deve includere:
+Paired results are reported as changes relative to the degraded input. OOD
+images have no paired reference, so UCIQE and a UIQM proxy are reported instead.
 
-1. full training
-2. baseline evaluation su best checkpoint
-3. baseline evaluation su final checkpoint
-4. OOD evaluation su `challenging-60`
-5. report canonico della run
+## Consolidated experiments
 
-## Dove leggere i risultati della run
+| Run | Isolated change | Best ID ΔPSNR | OOD ΔUCIQE | Decision |
+|---|---|---:|---:|---|
+| `1490` | Restored curated baseline | +1.5089 dB | -0.2504 | Baseline |
+| `1491` | Increase horizon from 3 to 5 | **+1.5622 dB** | -0.2600 | Strong ID candidate |
+| `1492` | Extended 8-action set | +0.8762 dB | **-0.1677** | Rejected: excessive ID loss |
+| `1493` | Add global LAB statistics | +1.5573 dB | -0.3724 | Rejected: OOD regression |
+| `1494` | Final v4.0 configuration | **+1.5492 dB** | -0.1707 | Official presentation run |
 
-Per ogni run ufficiale:
+## Official v4.0 run
 
-- report markdown: `${LOGS_ROOT}/dqn/<RUN_ID>/underwater_results.md`
-- summary JSON: `${LOGS_ROOT}/dqn/<RUN_ID>/underwater_results_summary.json`
-- notebook di analisi: `underwater_policy_analysis.ipynb`
+Run ID: `dqn_underwater_full_20260510_165955_1494`
 
-## Nota metodologica
+### Best checkpoint
 
-- I risultati ID paired sono riportati come delta PSNR / delta SSIM rispetto all’input degradato.
-- I risultati OOD `challenging-60` non hanno reference e sono quindi riportati con metriche no-reference.
-- Il confronto con Bologna va letto con cautela perché Bologna riporta metriche assolute, mentre il nostro workflow usa soprattutto metriche differenziali.
+- episode: `1540`
+- mean ΔPSNR: `+1.5492 dB`
+- output PSNR: `18.7157 dB`
+- output SSIM: `0.8275`
+- acceptance suite: passed
 
-## Template nuova run post-fix OOD
+### Final checkpoint
 
-- Data: `2026-05-09`
-- Run ID: `<da compilare>`
-- Config: `configs/experiments/underwater_dqn_v1.yaml`
-- Modifiche attive:
-  - Fix 1: canale LAB globale nell'osservazione
-  - Fix 2: reward combinato con `psnr_weight=1.0` e `ssim_weight=5.0`
-  - Fix 3: action set `underwater_extended_v1`, `max_steps=5`
-- Risultati ID attesi da compilare:
-  - `mean_delta_psnr`: `<...>`
-  - `output_psnr`: `<...>`
-  - `output_ssim`: `<...>`
-  - `stop_rate`: `<...>`
-  - `dominant_action_share`: `<...>`
-- Risultati OOD attesi da compilare:
-  - `mean_delta_uciqe`: `<...>`
-  - `mean_delta_uiqm_proxy`: `<...>`
-- Confronto con run precedente:
-  - `delta mean_delta_psnr`: `<...>`
-  - `delta mean_delta_uciqe`: `<...>`
-  - `delta mean_delta_uiqm_proxy`: `<...>`
+- mean ΔPSNR: `+1.0060 dB`
+- output PSNR: `18.1724 dB`
+- output SSIM: `0.8035`
+- acceptance suite: passed
 
-## Baseline v3.0 — `dqn_underwater_full_20260510_104821_1490`
+### OOD `challenging-60`
 
-- Config: `configs/experiments/underwater_dqn_v1.yaml`
-- Goal: ristabilire la baseline canonica dopo la regressione della run `1489`
-- Best checkpoint:
-  - episode `430`
-  - `mean_delta_psnr = +1.5089`
-  - `output_psnr = 18.6754`
-  - `output_ssim = 0.8318`
-  - `acceptance = true`
-- Final checkpoint:
-  - `mean_delta_psnr = +0.7461`
-  - `output_psnr = 17.9126`
-  - `output_ssim = 0.8032`
-  - `acceptance = true`
-- OOD challenging-60:
-  - `mean_delta_uciqe = -0.2504`
-  - `mean_delta_uiqm_proxy = -0.0161`
-- Confronto:
-  - meglio della baseline storica `1488` sul best checkpoint ID
-  - molto meglio della run regressa `1489` su ID
-  - OOD quasi allineato alla baseline storica e nettamente migliore di `1489`
-- Decisione:
-  - `1490` diventa il riferimento ufficiale per tutte le ablation OOD successive
+- mean ΔUCIQE: `-0.1707`
+- mean ΔUIQM proxy: `-0.0119`
 
-## Ablation A — `dqn_underwater_full_20260510_111515_1491`
+## Decision rationale
 
-- Config: `configs/experiments/ablation_A_max_steps5.yaml`
-- Modifica isolata:
-  - `max_steps: 3 -> 5`
-- Best checkpoint:
-  - episode `1730`
-  - `mean_delta_psnr = +1.5622`
-  - `output_psnr = 18.7287`
-  - `output_ssim = 0.8330`
-  - `acceptance = true`
-- OOD challenging-60:
-  - `mean_delta_uciqe = -0.2600`
-  - `mean_delta_uiqm_proxy = -0.0144`
-- Decisione:
-  - promossa come configurazione finale candidata
-  - migliora il best checkpoint ID rispetto a `1490`
-  - resta semplice: curated actions, niente LAB
+The final configuration keeps the curated four-action policy and five-step
+horizon without LAB statistics. It stays close to the best paired result,
+improves OOD performance relative to the restored baseline, and remains easier
+to inspect than the extended action set.
 
-## Ablation B — `dqn_underwater_full_20260510_155811_1492`
-
-- Config: `configs/experiments/ablation_B_extended_actions.yaml`
-- Modifica isolata:
-  - `action_set: underwater_curated_v1 -> underwater_extended_v1`
-  - `max_steps=5` mantenuto
-- Best checkpoint:
-  - episode `1070`
-  - `mean_delta_psnr = +0.8762`
-  - `output_psnr = 18.0427`
-  - `output_ssim = 0.8145`
-  - `acceptance = true`
-- OOD challenging-60:
-  - `mean_delta_uciqe = -0.1677`
-  - `mean_delta_uiqm_proxy = -0.0095`
-- Decisione:
-  - non promossa
-  - migliora l'OOD ma degrada troppo l'ID
-
-## Ablation C — `dqn_underwater_full_20260510_162433_1493`
-
-- Config: `configs/experiments/ablation_C_lab_stats.yaml`
-- Modifica isolata:
-  - `include_lab_stats: false -> true`
-  - `max_steps=5` e curated actions mantenuti
-- Best checkpoint:
-  - episode `1650`
-  - `mean_delta_psnr = +1.5573`
-  - `output_psnr = 18.7238`
-  - `output_ssim = 0.8365`
-  - `acceptance = true`
-- Final checkpoint:
-  - `mean_delta_psnr = +1.3036`
-  - `output_psnr = 18.4700`
-  - `output_ssim = 0.8149`
-  - `acceptance = true`
-- OOD challenging-60:
-  - `mean_delta_uciqe = -0.3724`
-  - `mean_delta_uiqm_proxy = -0.0175`
-- Decisione:
-  - non promossa
-  - mantiene l'ID alto ma peggiora nettamente l'OOD
-
-## Configurazione finale v4.0
-
-- Config ufficiale: `configs/experiments/underwater_dqn_v1.yaml`
-- Scelta finale:
-  - `max_steps = 5`
-  - `action_set = underwater_curated_v1`
-  - `include_lab_stats = false`
-  - `psnr_weight = 1.0`
-  - `ssim_weight = 10.0`
-- Razionale:
-  - e' la miglior combinazione complessiva tra performance ID, stabilita' e semplicita'
-  - supera Bologna sul best checkpoint con un action space molto piu' piccolo
-  - evita sia la regressione ID dell'action set esteso sia la regressione OOD del canale LAB
-
-## Run ufficiale finale v4.0 — `dqn_underwater_full_20260510_165955_1494`
-
-- Config: `configs/experiments/underwater_dqn_v1.yaml`
-- Best checkpoint:
-  - episode `1540`
-  - `mean_delta_psnr = +1.5492`
-  - `output_psnr = 18.7157`
-  - `output_ssim = 0.8275`
-  - `acceptance = true`
-- Final checkpoint:
-  - `mean_delta_psnr = +1.0060`
-  - `output_psnr = 18.1724`
-  - `output_ssim = 0.8035`
-  - `acceptance = true`
-- OOD challenging-60:
-  - `mean_delta_uciqe = -0.1707`
-  - `mean_delta_uiqm_proxy = -0.0119`
-- Confronto:
-  - migliora la baseline `1490` su OOD
-  - resta molto vicino al best ID di `1491`
-  - offre il miglior compromesso finale complessivo del branch
-- Decisione:
-  - questa e' la run ufficiale da presentazione
+The ablations do not solve OOD generalization. The next experiment should
+prioritize broader training domains and perceptual/no-reference validation
+rather than merely increasing the number of episodes or actions.

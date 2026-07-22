@@ -9,21 +9,31 @@ Supports multiple action sets:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any, TypedDict
+
 import numpy as np
 import torch
 from PIL import Image
 
-from src.actions import filters
-from src.actions import underwater_v1
+from src.actions import filters, underwater_v1
 
 
-# Registry of action sets by name
-ACTION_SETS = {
+class ActionSetDefinition(TypedDict, total=False):
+    """Registry entry describing one compatible discrete action set."""
+
+    actions: Any
+    action_names: dict[int, str]
+    action_descriptions: dict[int, str]
+    num_actions: int
+    apply_tensor_action: Callable[[torch.Tensor, int], torch.Tensor]
+
+
+ACTION_SETS: dict[str, ActionSetDefinition] = {
     "general": {
         "actions": filters,  # Use filters module for backward compatibility
         "action_names": filters.ACTION_NAMES,
         "num_actions": 9,  # 0-8 (STOP is 8)
-        "apply_tensor_action": filters.apply_action,
     },
     "underwater_curated_v1": {
         "actions": underwater_v1,
@@ -42,40 +52,31 @@ ACTION_SETS = {
 }
 
 
-def get_action_set(name: str):
-    """
-    Get action set by name.
-    
-    Args:
-        name: Action set name registered in ``ACTION_SETS``
-    
-    Returns:
-        Action set module/dict
-    """
+def _get_definition(name: str) -> ActionSetDefinition:
     if name not in ACTION_SETS:
-        raise ValueError(f"Unknown action set: {name}. Available: {list(ACTION_SETS.keys())}")
-    return ACTION_SETS[name]["actions"]
+        available = ", ".join(sorted(ACTION_SETS))
+        raise ValueError(f"Unknown action set {name!r}. Available: {available}")
+    return ACTION_SETS[name]
+
+
+def get_action_set(name: str) -> Any:
+    """Return the implementation module registered for ``name``."""
+    return _get_definition(name)["actions"]
 
 
 def get_num_actions(name: str) -> int:
     """Get number of actions in a set."""
-    if name not in ACTION_SETS:
-        raise ValueError(f"Unknown action set: {name}")
-    return ACTION_SETS[name]["num_actions"]
+    return _get_definition(name)["num_actions"]
 
 
-def get_action_names(name: str) -> dict:
+def get_action_names(name: str) -> dict[int, str]:
     """Get action name mapping for a set."""
-    if name not in ACTION_SETS:
-        raise ValueError(f"Unknown action set: {name}")
-    return ACTION_SETS[name]["action_names"]
+    return _get_definition(name)["action_names"]
 
 
-def get_action_descriptions(name: str) -> dict:
+def get_action_descriptions(name: str) -> dict[int, str]:
     """Get action description mapping for a set when available."""
-    if name not in ACTION_SETS:
-        raise ValueError(f"Unknown action set: {name}")
-    return ACTION_SETS[name].get("action_descriptions", {})
+    return _get_definition(name).get("action_descriptions", {})
 
 
 def get_stop_action_id(name: str) -> int:
@@ -110,11 +111,8 @@ def apply_action_to_pil(image: Image.Image, action: int, action_set_name: str) -
     if action_set_name == "general":
         return filters.apply_action(image, action)
 
-    if action_set_name not in ACTION_SETS:
-        raise ValueError(f"Unsupported action set: {action_set_name}")
-
     tensor_image = _pil_to_tensor(image)
-    apply_tensor_action = ACTION_SETS[action_set_name].get("apply_tensor_action")
+    apply_tensor_action = _get_definition(action_set_name).get("apply_tensor_action")
     if apply_tensor_action is None:
         raise ValueError(f"Action set {action_set_name} does not define a tensor action handler.")
     enhanced = apply_tensor_action(tensor_image, action)

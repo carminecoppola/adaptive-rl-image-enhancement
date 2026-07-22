@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement"
+PROJECT_ROOT="${PROJECT_ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}}"
 cd "$PROJECT_ROOT"
 
 if [ ! -d "venv" ]; then
@@ -39,7 +39,7 @@ full_final_ckpt="${CHECKPOINT_ROOT}/dqn/${full_run_id}/dqn_final_policy_net.pt"
 full_log="${LOGS_ROOT}/full_training_${job_id}.log"
 
 echo "=========================================="
-echo "Underwater RL Consolidation Pipeline"
+echo "Underwater DDQN Training and Evaluation Pipeline"
 echo "=========================================="
 echo "Job ID: ${job_id}"
 echo "Project root: ${PROJECT_ROOT}"
@@ -52,7 +52,7 @@ echo "=========================================="
 
 echo ""
 echo "[1/3] Full training"
-RUN_ID="${full_run_id}" python3 src/training/train.py \
+RUN_ID="${full_run_id}" python3 -m src.training.train \
   --experiment "${EXPERIMENT}" \
   --phase full_training \
   2>&1 | tee -a "${full_log}"
@@ -68,33 +68,33 @@ fi
 
 echo ""
 echo "[2/3] Full evaluation artifacts"
-python3 src/evaluation/analyze_dqn_actions.py \
+python3 -m src.evaluation.analyze_dqn_actions \
   --checkpoint "${full_best_ckpt}" \
   --num-images 50 \
   --output-name action_analysis_best.json
 
-python3 src/evaluation/evaluation_dqn_baselines.py \
+python3 -m src.evaluation.evaluation_dqn_baselines \
   --checkpoint "${full_best_ckpt}" \
   --num-images 50 \
   --output-name evaluation_baselines_best.json \
   --action-analysis-file action_analysis_best.json
 
-python3 src/evaluation/analyze_dqn_actions.py \
+python3 -m src.evaluation.analyze_dqn_actions \
   --checkpoint "${full_final_ckpt}" \
   --num-images 50 \
   --output-name action_analysis_final.json
 
-python3 src/evaluation/evaluation_dqn_baselines.py \
+python3 -m src.evaluation.evaluation_dqn_baselines \
   --checkpoint "${full_final_ckpt}" \
   --num-images 50 \
   --output-name evaluation_baselines_final.json \
   --action-analysis-file action_analysis_final.json
 
-python3 src/evaluation/evaluate_underwater_ood.py \
+python3 -m src.evaluation.evaluate_underwater_ood \
   --checkpoint "${full_best_ckpt}" \
   --output-name evaluation_ood_challenging60.json
 
-python3 src/evaluation/generate_underwater_report.py \
+python3 -m src.evaluation.generate_underwater_report \
   --run-dir "${LOGS_ROOT}/dqn/${full_run_id}"
 
 echo ""

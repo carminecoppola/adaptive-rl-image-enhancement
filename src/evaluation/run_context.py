@@ -29,7 +29,10 @@ def resolve_run_log_dir(checkpoint_path: Path, run_id: str) -> Path:
     return candidates[0]
 
 
-def load_run_config_bundle(checkpoint_path: Path, run_id: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], Path]:
+def load_run_config_bundle(
+    checkpoint_path: Path,
+    run_id: str,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], Path]:
     """
     Load dataset/environment/training config bundle for a checkpointed run.
 
@@ -40,11 +43,17 @@ def load_run_config_bundle(checkpoint_path: Path, run_id: str) -> tuple[dict[str
     run_log_dir = resolve_run_log_dir(checkpoint_path, run_id)
     effective_config_path = run_log_dir / "effective_config.json"
     if effective_config_path.exists():
-        with open(effective_config_path, "r") as f:
+        with effective_config_path.open("r", encoding="utf-8") as f:
             payload = json.load(f)
         canonical = load_config("configs/experiments/underwater_dqn_v1.yaml")
         return (
-            payload.get("dataset", {"dataset": canonical.get("dataset", {}), "degradation": canonical.get("degradation", {})}),
+            payload.get(
+                "dataset",
+                {
+                    "dataset": canonical.get("dataset", {}),
+                    "degradation": canonical.get("degradation", {}),
+                },
+            ),
             payload.get("environment", canonical),
             payload.get("training", canonical),
             run_log_dir,

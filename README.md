@@ -1,92 +1,75 @@
-# Adaptive RL Image Enhancement
+# Adaptive Reinforcement Learning for Underwater Image Enhancement
 
-Progetto di miglioramento di immagini underwater con reinforcement learning su UIEB.
-
-Il progetto attuale è una **reimplementazione da zero**, ispirata al lavoro dell'Università di Bologna del 2022, ma con pipeline, training, evaluation e report riscritti in modo modulare e riproducibile. Il riferimento concettuale è Bologna; il codice **non** è un fork del loro notebook.
-
-## In breve
-
-- task: enhancement di immagini underwater degradate
-- dataset canonico: `UIEB`
-- agente usato: **DDQN**
-- architettura corrente: `DQNAgent` con `use_double_dqn=true` e `use_dueling_dqn=false`
-- action set canonico: `underwater_curated_v1`
-- notebook finale: `underwater_policy_analysis.ipynb`
-
-## Cosa fa il sistema
-
-Il flusso è questo:
-
-1. prende un'immagine underwater degradata in input
-2. applica una piccola azione discreta
-3. misura se l'immagine è migliorata rispetto alla reference
-4. ripete per pochi step
-5. si ferma con l'azione `stop`
-
-L'action set canonico corrente è volutamente piccolo e leggibile:
+This repository implements a reproducible Double DQN (DDQN) workflow that
+learns short, interpretable enhancement sequences for paired underwater
+images. The canonical policy operates directly on the current image and
+chooses among four deterministic actions:
 
 - `white_balance`
 - `contrast_up`
 - `sharpen`
 - `stop`
 
-## DDQN o DQN?
+The project is an independent implementation inspired by earlier underwater
+reinforcement-learning work. It is not a fork of the University of Bologna
+notebook or codebase.
 
-Usiamo **Double DQN (DDQN)**.
+## Canonical result
 
-- la classe si chiama `DQNAgent`, ma l'algoritmo attivo è DDQN
-- conferma nel codice: [src/agents/dqn_agent.py](/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement/src/agents/dqn_agent.py)
-- conferma nella config ufficiale: [configs/experiments/underwater_dqn_v1.yaml](/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement/configs/experiments/underwater_dqn_v1.yaml)
+The official v4.0 run is `dqn_underwater_full_20260510_165955_1494`.
 
-Non stiamo usando la variante dueling in questo setup ufficiale.
+| Metric | Best checkpoint |
+|---|---:|
+| Episode | 1,540 |
+| Mean in-domain ΔPSNR | **+1.5492 dB** |
+| Output PSNR | **18.7157 dB** |
+| Output SSIM | **0.8275** |
+| Acceptance suite | **Passed** |
+| OOD ΔUCIQE (`challenging-60`) | **-0.1707** |
+| OOD ΔUIQM proxy | **-0.0119** |
 
-## Bologna, fisica dell'acqua e cosa abbiamo riusato
+The paired in-domain result is positive. The negative no-reference OOD deltas
+show that robustness to shifted underwater conditions remains unresolved.
 
-Il progetto parte dal lavoro di Bologna come ispirazione metodologica:
+## How the system works
 
-- stessa idea generale: RL per migliorare immagini underwater
-- stesso obiettivo: imparare una sequenza di azioni migliorative
-- confronto esplicito nei report finali
+1. Load a degraded/reference UIEB pair.
+2. Convert the current image and normalized step into a four-channel state.
+3. Predict one Q-value for each action with a convolutional network.
+4. Apply the selected deterministic operator, or terminate with `stop`.
+5. Compute reference-based quality change and behavioral shaping terms.
+6. Store the transition in replay memory and optimize the DDQN policy.
+7. Select checkpoints by mean ΔPSNR and enforce behavioral acceptance gates.
 
-Non stiamo usando il loro codice. La codebase qui è stata riscritta con:
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for component boundaries and
+[docs/underwater_results.md](docs/underwater_results.md) for the experiment
+history.
 
-- environment dedicato
-- training pipeline separata
-- evaluation ID e OOD separate
-- report automatici
-- notebook finale coerente con gli artifact
+## Repository layout
 
-Sulla “fisica dell'acqua”:
-
-- **non** stiamo usando un modello fisico completo della propagazione della luce in acqua nel reward o nello stato
-- esistono però operatori e baseline **physics-inspired**, per esempio `DCP` (Dark Channel Prior), che è un metodo classico di dehazing
-- nel workflow canonico attuale il policy ufficiale usa il set curato a 4 azioni, quindi DCP non è nel loop principale della policy finale
+```text
+configs/experiments/     Canonical experiment configuration
+src/actions/             Deterministic enhancement operators and registries
+src/agents/              Q-network, replay buffer, and DDQN agent
+src/envs/                Gymnasium image-enhancement environment
+src/evaluation/          Baselines, action analysis, OOD evaluation, reports
+src/metrics/             Paired and no-reference metrics
+src/training/            Training loop, tracking, artifacts, and run setup
+src/utils/               Configuration and deterministic split helpers
+tests/                   Unit tests for actions, environment, DDQN, and baselines
+docs/                    Architecture, results, and comparison notes
+```
 
 ## Setup
-
-### 1. Crea l'ambiente Python
 
 ```bash
 bash scripts/setup_env.sh
 source venv/bin/activate
-```
-
-### 2. Configura i path locali
-
-Il file `.env.example` **serve** e va tenuto: è il template minimo per configurare il progetto.
-
-```bash
 cp .env.example .env
 ```
 
-Poi aggiorna almeno queste variabili:
-
-- `DATASET_ROOT`
-- `UIEB_ROOT`
-- `LOGS_ROOT`
-- `CHECKPOINT_ROOT`
-
-La struttura attesa di UIEB è:
+Set the dataset, log, and checkpoint roots in `.env`. The expected dataset
+layout is:
 
 ```text
 UIEB/
@@ -95,57 +78,59 @@ UIEB/
   challenging-60/
 ```
 
-## Esecuzione canonica
+## Train
 
-### Training completo locale
+Local execution:
 
 ```bash
-python src/training/train.py --experiment underwater_dqn_v1 --phase full_training
+python -m src.training.train \
+  --experiment underwater_dqn_v1 \
+  --phase full_training
 ```
 
-### Training completo via Slurm
+Slurm execution:
 
 ```bash
 sbatch scripts/train_underwater.sbatch
 ```
 
-## Evaluation manuale
-
-Con un checkpoint best:
+## Evaluate
 
 ```bash
-python src/evaluation/analyze_dqn_actions.py --checkpoint /path/to/dqn_best_policy_net.pt --num-images 50 --output-name action_analysis_best.json
-python src/evaluation/evaluation_dqn_baselines.py --checkpoint /path/to/dqn_best_policy_net.pt --num-images 50 --output-name evaluation_baselines_best.json --action-analysis-file action_analysis_best.json
-python src/evaluation/evaluate_underwater_ood.py --checkpoint /path/to/dqn_best_policy_net.pt --output-name evaluation_ood_challenging60.json
+python -m src.evaluation.analyze_dqn_actions \
+  --checkpoint /path/to/dqn_best_policy_net.pt \
+  --num-images 50
+
+python -m src.evaluation.evaluation_dqn_baselines \
+  --checkpoint /path/to/dqn_best_policy_net.pt \
+  --num-images 50
+
+python -m src.evaluation.evaluate_underwater_ood \
+  --checkpoint /path/to/dqn_best_policy_net.pt
 ```
 
-Per generare il report finale di una run:
+Generate the canonical per-run report with:
 
 ```bash
-python src/evaluation/generate_underwater_report.py --run-dir /path/to/logs/dqn/<RUN_ID>
+python -m src.evaluation.generate_underwater_report \
+  --run-dir /path/to/logs/dqn/<RUN_ID>
 ```
 
-## Dove sono i pesi del modello
+## Quality checks
 
-Percorso canonico:
-
-- `${CHECKPOINT_ROOT}/dqn/<RUN_ID>/dqn_best_policy_net.pt`
-- `${CHECKPOINT_ROOT}/dqn/<RUN_ID>/dqn_final_policy_net.pt`
-
-Nel repository locale esistono anche esempi sotto:
-
-- `checkpoints/dqn/dqn_best_policy_net.pt`
-- `checkpoints/dqn/dqn_final_policy_net.pt`
-
-## Dove leggere i risultati
-
-- stato del progetto: [docs/CURRENT_STATE.md](/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement/docs/CURRENT_STATE.md)
-- guida operativa: [scripts/TRAINING_GUIDE.md](/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement/scripts/TRAINING_GUIDE.md)
-- risultati underwater: [docs/underwater_results.md](/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement/docs/underwater_results.md)
-- notebook finale: [underwater_policy_analysis.ipynb](/home/ccoppola/projects/ml2-project/adaptive-rl-image-enhancement/underwater_policy_analysis.ipynb)
-
-## Test
+Install development dependencies, then run:
 
 ```bash
-pytest tests/ -v --tb=short
+python -m pytest
+ruff check .
+ruff format --check .
+python -m compileall -q src tests
 ```
+
+## Reproducibility
+
+Each official run stores its resolved configuration, split metadata,
+checkpoints, episode summaries, evaluation history, action analysis, baseline
+evaluation, OOD evaluation, and generated report under its run-scoped output
+directory. Local datasets, checkpoints, logs, generated reports, and
+presentations are intentionally ignored by Git.
