@@ -63,6 +63,7 @@ mlruns/
 
 # Jupyter notebooks
 *.ipynb
+!notebooks/presentation.ipynb
 
 # Test artifacts and temporary files
 actions_test

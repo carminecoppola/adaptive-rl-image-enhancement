@@ -1,13 +1,8 @@
-from src.evaluation.baselines import (
-    BASELINE_POLICIES,
-    apply_baseline_policy,
-    evaluate_all_baselines,
-    evaluate_baseline_policy,
-)
+"""Evaluation pipeline for underwater RL image enhancement.
 
-__all__ = [
-    "BASELINE_POLICIES",
-    "apply_baseline_policy",
-    "evaluate_all_baselines",
-    "evaluate_baseline_policy",
-]
+Import directly from submodules:
+- ``evaluation_dqn_baselines``
+- ``evaluate_underwater_ood``
+- ``analyze_dqn_actions``
+- ``generate_underwater_report``
+"""

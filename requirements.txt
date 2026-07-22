@@ -10,4 +10,6 @@ gymnasium
 stable-baselines3
 pyyaml
 python-dotenv
+jupyter
+ipykernel
 tqdm

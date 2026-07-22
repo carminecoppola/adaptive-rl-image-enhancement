@@ -1,8 +1,8 @@
 """
 Image processing actions for the RL agent.
 
-Each action takes a PIL image and returns a transformed PIL image.
-These actions define the discrete action space of the environment.
+The current branch uses a compact standard action space focused on
+generic image enhancement rather than domain-specific operators.
 """
 
 from __future__ import annotations
