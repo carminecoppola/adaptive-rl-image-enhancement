@@ -21,6 +21,9 @@ class ReplayBuffer:
     def __init__(self, capacity: int) -> None:
         if capacity <= 0:
             raise ValueError("capacity must be positive")
+        # `deque(maxlen=...)` gives FIFO eviction for free: once full, pushing
+        # a new transition silently drops the oldest one, so the buffer always
+        # holds the most recent `capacity` transitions without extra bookkeeping.
         self.buffer: deque[Transition] = deque(maxlen=capacity)
 
     def push(
@@ -45,6 +48,10 @@ class ReplayBuffer:
                 f"cannot sample {batch_size} transitions from a buffer of {len(self.buffer)}"
             )
 
+        # Uniform random sampling breaks the temporal correlation between
+        # consecutive steps of the same episode. Training on a shuffled mix of
+        # transitions from many past episodes, instead of the live trajectory,
+        # is what makes off-policy value learning with a neural net stable.
         batch = random.sample(self.buffer, batch_size)
         states, actions, rewards, next_states, dones = zip(*batch, strict=True)
 

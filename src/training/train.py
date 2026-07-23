@@ -433,8 +433,16 @@ def train() -> None:
             if done:
                 break
 
+        # Exponential epsilon decay: explore heavily in early episodes, then
+        # gradually shift toward the greedy policy, floored at `epsilon_end`
+        # so a small amount of exploration always remains.
         agent.epsilon = max(epsilon_end, agent.epsilon * epsilon_decay)
 
+        # Sync the target network every few episodes rather than every step.
+        # A target that moves too quickly would chase its own predictions
+        # (the same instability Double DQN's selection/evaluation split
+        # helps mitigate); a fixed target for a while keeps the Bellman
+        # targets stable long enough to actually converge toward them.
         if episode % target_update_every == 0:
             agent.update_target_network()
 
@@ -509,6 +517,11 @@ def train() -> None:
             )
 
             print_eval_log(episode, eval_stats)
+            # Checkpoint selection uses this periodic evaluation on a fixed,
+            # held-out subset — not the training reward and not simply the
+            # last episode — because RL training is not monotonic (see
+            # docs/CURRENT_STATE.md: the final checkpoint of run 1494 is
+            # measurably worse than its best one).
             best_state = maybe_update_best_checkpoint(
                 run_state=best_state,
                 eval_stats=eval_stats,

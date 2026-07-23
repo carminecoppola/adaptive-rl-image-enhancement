@@ -148,17 +148,27 @@ class ImageEnhancementEnv(gym.Env):
 
         # STOP is a real policy decision: it preserves the current image and
         # triggers terminal quality terms instead of applying another filter.
+        # `terminated` means the agent chose to end the episode (Gymnasium
+        # semantics); `truncated` (below) means the step budget ran out
+        # instead. Both end the rollout, but only one reflects a deliberate
+        # policy choice, which is why they are tracked separately in `info`.
         terminated = action == self.stop_action
 
         previous_quality = self.previous_quality
 
         if not terminated:
+            # Deterministic operator lookup: the network never outputs pixels
+            # directly, it only selects which fixed transform in
+            # `src/actions` to apply to the current image.
             self.current_image = apply_action_to_pil(
                 self.current_image, action, self.action_set_name
             )
 
         current_quality = self._compute_quality(self.current_image)
 
+        # Core reward signal: how much closer this step moved the image to
+        # the reference, in the metric chosen by `reward_metric`. Everything
+        # below this line is behavioral shaping layered on top of it.
         delta_quality = current_quality - previous_quality
         step_penalty_applied = self.step_penalty if not terminated else 0.0
         repeated_penalty_applied = 0.0
@@ -177,6 +187,10 @@ class ImageEnhancementEnv(gym.Env):
             no_improvement_penalty_applied = self.no_improvement_penalty
 
         if terminated:
+            # Reward STOP only if it locks in a real net gain over the
+            # original degraded image; otherwise penalize stopping early
+            # with nothing to show for it. This is what teaches the agent
+            # a meaningful STOP instead of stopping at step 0 by default.
             improvement_vs_initial = current_quality - self.initial_quality
             if improvement_vs_initial >= self.early_stop_min_improvement:
                 stop_bonus_applied = self.stop_bonus_scale * improvement_vs_initial

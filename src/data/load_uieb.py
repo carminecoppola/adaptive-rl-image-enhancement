@@ -36,6 +36,14 @@ def _find_existing_directory(root: Path, candidates: tuple[str, ...]) -> Path:
 
 
 def _discover_pairs(root: Path) -> list[UIEBPair]:
+    """Match each degraded image to its reference by filename stem.
+
+    UIEB stores `raw/` and `reference/` as separate directories with the
+    same filenames on both sides. Matching by stem (not by directory order)
+    guarantees pair integrity even if one side is missing files or sorted
+    differently — a silent off-by-one pairing here would corrupt every
+    downstream PSNR/SSIM value without raising an error.
+    """
     raw_dir = _find_existing_directory(root, ("raw", "raw-890"))
     reference_dir = _find_existing_directory(root, ("reference", "reference-890"))
 
@@ -63,6 +71,10 @@ def _split_indices(size: int, split: SplitName, seed: int) -> list[int]:
         raise ValueError("split must be one of: train, val, test, all")
 
     indices = list(range(size))
+    # A locally-seeded RNG (not the global one) makes the split reproducible
+    # across processes/runs regardless of what else consumes randomness
+    # before this call — the same seed always yields the same train/val/test
+    # partition, which is required for comparing checkpoints across runs.
     random.Random(seed).shuffle(indices)
     train_end = max(1, int(size * 0.8))
     val_end = max(train_end + 1, int(size * 0.9)) if size > 1 else train_end

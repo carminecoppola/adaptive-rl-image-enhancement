@@ -61,11 +61,15 @@ def white_balance_grayworld(image: Tensor) -> Tensor:
     # Convert BGR → LAB
     img_lab = cv2.cvtColor(img_np, cv2.COLOR_BGR2LAB).astype(np.float32)
 
-    # Grayworld: mean of A and B channels should be 128
+    # Grayworld assumption: over a natural scene, the average color should be
+    # neutral gray (A=B=128 in CIELAB). Underwater images are skewed toward
+    # blue/green because red wavelengths attenuate fastest with depth, so the
+    # measured A/B means drift away from 128 in a fairly consistent direction.
     mean_a = img_lab[:, :, 1].mean()
     mean_b = img_lab[:, :, 2].mean()
 
-    # Adjustment
+    # Shift each chrominance channel by exactly the offset needed to recenter
+    # its mean at neutral gray — a global, deterministic, one-shot correction.
     a_shift = 128 - mean_a
     b_shift = 128 - mean_b
 
@@ -340,6 +344,9 @@ def stop(image: Tensor) -> Tensor:
 # Action Registry
 # ============================================================================
 
+# Canonical v4.0 action set: the only registry used by the official run
+# (dqn_underwater_full_20260510_165955_1494) and by ARCHITECTURE.md. Every
+# other function/registry in this module exists for ablations only.
 UNDERWATER_CURATED_V1_ACTIONS = {
     0: white_balance_grayworld,
     1: contrast_up,

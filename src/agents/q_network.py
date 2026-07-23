@@ -73,6 +73,9 @@ class QNetwork(nn.Module):
     def forward(self, observations: Tensor) -> Tensor:
         """Return Q-values for a batch of image observations."""
         observations = observations.float()
+        # Tolerate both [0, 1] normalized inputs and raw [0, 255] uint-range
+        # tensors so the same network works from the env, from tests with
+        # synthetic images, and from ad-hoc inference scripts.
         if observations.numel() > 0 and observations.detach().max().item() > 1.0:
             observations = observations / 255.0
 
@@ -80,6 +83,10 @@ class QNetwork(nn.Module):
             observations.shape[-2] < self.MINIMUM_INPUT_SIZE
             or observations.shape[-1] < self.MINIMUM_INPUT_SIZE
         ):
+            # The conv stack's receptive field/stride assumes at least
+            # 128x128; smaller images (e.g. the 32x32 ones used in unit
+            # tests) are upsampled first instead of failing or needing a
+            # second architecture.
             observations = F.interpolate(
                 observations,
                 size=(self.MINIMUM_INPUT_SIZE, self.MINIMUM_INPUT_SIZE),
@@ -89,8 +96,14 @@ class QNetwork(nn.Module):
 
         features = self.features(observations)
         if not self.use_dueling_dqn:
+            # Canonical v4.0 path: one Q-value per action, directly.
             return self.q_head(features)
 
+        # Dueling architecture (experimental, unused in v4.0): split value
+        # into a state-value term and a per-action advantage term. Subtracting
+        # the mean advantage anchors the decomposition (otherwise value and
+        # advantage could drift by an arbitrary constant and still sum to the
+        # same Q-value, making the split ill-defined).
         value = self.value_head(features)
         advantage = self.advantage_head(features)
         return value + advantage - advantage.mean(dim=1, keepdim=True)

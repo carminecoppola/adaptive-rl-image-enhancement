@@ -74,19 +74,27 @@ class DQNAgent:
         Evaluation scripts set ``epsilon`` to zero, making this method fully
         greedy and deterministic for a fixed model and input state.
         """
+        # Epsilon-greedy exploration: with probability `epsilon` act randomly
+        # to keep discovering transitions; otherwise exploit the current
+        # value estimates. `epsilon` decays over training (see train.py) so
+        # the policy moves from mostly random to mostly greedy.
         if random.random() < self.epsilon:
             return random.randrange(self.num_actions)
 
         state_tensor = torch.as_tensor(state, dtype=torch.float32, device=self.device)
 
         if state_tensor.ndim == 3:
+            # A single observation has no batch dimension yet; add one so
+            # the network always sees a batch, even of size 1.
             state_tensor = state_tensor.unsqueeze(0)
 
+        # NHWC (as produced by the environment) -> NCHW (as expected by Conv2d).
         state_tensor = state_tensor.permute(0, 3, 1, 2)
 
         with torch.no_grad():
             q_values = self.policy_net(state_tensor)
 
+        # Greedy action: the one with the highest estimated expected return.
         return int(torch.argmax(q_values, dim=1).item())
 
     def optimize_model(self, replay_buffer: Any) -> float | None:
@@ -112,6 +120,8 @@ class DQNAgent:
             neginf=-10.0,
         ).clamp(-10.0, 10.0)
 
+        # Q(s, a) actually taken, read out of the full action-value vector
+        # with `gather` so gradients only flow through the chosen action.
         current_q_values = self.policy_net(states).gather(1, actions.unsqueeze(1))
         current_q_values = current_q_values.squeeze(1)
         if not torch.isfinite(current_q_values).all():
@@ -120,10 +130,16 @@ class DQNAgent:
         with torch.no_grad():
             if self.use_double_dqn:
                 # Double DQN: action selection from policy_net, action evaluation from target_net.
+                # Using the same network for both (vanilla DQN) tends to pick
+                # actions whose value it has overestimated, then confirms its
+                # own overestimate — this decoupling breaks that feedback loop.
                 next_actions = self.policy_net(next_states).argmax(dim=1, keepdim=True)
                 next_q_values = self.target_net(next_states).gather(1, next_actions).squeeze(1)
             else:
                 next_q_values = self.target_net(next_states).max(dim=1)[0]
+            # Bellman target: immediate reward plus discounted future value.
+            # `(1 - dones)` zeroes out the bootstrap term on terminal
+            # transitions, since there is no "next state" to value.
             target_q_values = rewards + self.gamma * next_q_values * (1.0 - dones)
             target_q_values = torch.nan_to_num(
                 target_q_values,
@@ -132,12 +148,16 @@ class DQNAgent:
                 neginf=-10.0,
             ).clamp(-20.0, 20.0)
 
+        # Smooth L1 (Huber) loss between predicted and target Q-values —
+        # less sensitive to reward outliers than plain MSE.
         loss = self.loss_fn(current_q_values, target_q_values)
         if not torch.isfinite(loss):
             return None
 
         self.optimizer.zero_grad()
         loss.backward()
+        # Gradient clipping guards against the occasional large TD error
+        # destabilizing the network over a long unattended HPC run.
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=10.0)
         self.optimizer.step()
 
